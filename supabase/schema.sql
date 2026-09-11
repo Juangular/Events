@@ -1,4 +1,4 @@
-create table public.events (
+create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   description text not null,
@@ -26,6 +26,8 @@ create table public.events (
 
 alter table public.events enable row level security;
 
+drop policy if exists "Public can read current free events" on public.events;
+
 create policy "Public can read current free events"
 on public.events for select
 to anon, authenticated
@@ -36,7 +38,7 @@ using (
   and coalesce(end_date, start_date) >= current_date
 );
 
-create index events_public_dates_idx on public.events (department, status, price_type, start_date, end_date);
+create index if not exists events_public_dates_idx on public.events (department, status, price_type, start_date, end_date);
 
 create or replace function public.set_updated_at()
 returns trigger

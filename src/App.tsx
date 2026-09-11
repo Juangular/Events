@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, MapPin, Menu, Search, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { categories } from './data'
 import { getPublicEvents } from './lib/events'
@@ -36,6 +36,8 @@ function App() {
   const [mobileFilters, setMobileFilters] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
+  const closeSelected = useCallback(() => setSelected(null), [])
+
   useEffect(() => {
     getPublicEvents().then(setEvents).catch(() => setLoadError('No pudimos cargar la agenda. Intenta nuevamente en unos minutos.')).finally(() => setLoading(false))
   }, [])
@@ -54,15 +56,16 @@ function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#top">Saltar al contenido principal</a>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Plan Lima, inicio"><span className="brand-mark">P</span><span>plan<span className="brand-dot">.</span>lima</span></a>
-        <nav className={`main-nav ${menuOpen ? 'is-open' : ''}`}><a href="#eventos" onClick={() => setMenuOpen(false)}>Explorar</a><a href="#como-funciona" onClick={() => setMenuOpen(false)}>Cómo funciona</a><a href="#fuentes" onClick={() => setMenuOpen(false)}>Fuentes</a></nav>
+        <nav className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal"><a href="#eventos" onClick={() => setMenuOpen(false)}>Explorar</a><a href="#como-funciona" onClick={() => setMenuOpen(false)}>Cómo funciona</a><a href="#fuentes" onClick={() => setMenuOpen(false)}>Fuentes</a></nav>
         <span className="admin-link">Agenda abierta <ArrowUpRight size={15} /></span>
         <button className="menu-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Menu size={22} /></button>
       </header>
 
-      <main id="top">
-        <section className="hero">
+      <main id="top" tabIndex={-1}>
+        <section className="hero" id="como-funciona">
           <div className="hero-copy">
             <div className="eyebrow"><span className="eyebrow-line" /> Agenda abierta de Lima</div>
             <h1>Haz espacio<br /><em>para algo nuevo.</em></h1>
@@ -74,8 +77,8 @@ function App() {
 
         <section className="explorer" id="eventos">
           <div className="section-heading"><div><span className="section-kicker">Agenda pública</span><h2>Encuentra tu próximo plan</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
-          <div className="search-row"><div className="search-box"><Search size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por nombre, lugar o tema..." aria-label="Buscar eventos" />{query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} /></button>}</div><button className="filter-toggle" onClick={() => setMobileFilters(!mobileFilters)}><SlidersHorizontal size={17} /> Filtros</button></div>
-          <div className={`filter-bar ${mobileFilters ? 'is-open' : ''}`}>
+           <div className="search-row"><div className="search-box"><Search size={19} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por nombre, lugar o tema..." aria-label="Buscar eventos" />{query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} aria-hidden="true" /></button>}</div><button className="filter-toggle" aria-expanded={mobileFilters} aria-controls="filtros-eventos" onClick={() => setMobileFilters(!mobileFilters)}><SlidersHorizontal size={17} aria-hidden="true" /> Filtros</button></div>
+           <div className={`filter-bar ${mobileFilters ? 'is-open' : ''}`} id="filtros-eventos">
             <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)} disabled={month === monthOptions[0]}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)} disabled={month === monthOptions[monthOptions.length - 1]}><ChevronRight size={17} /></button></div>
             <label className="select-filter"><span>Categoría</span><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
             <label className="select-filter"><span>Modalidad</span><select value={modality} onChange={(event) => setModality(event.target.value)}><option>Todas</option><option>Presencial</option><option>Virtual</option></select></label>
@@ -83,11 +86,11 @@ function App() {
           </div>
         </section>
 
-        <section className="results-section" aria-live="polite"><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando la agenda...</h3><p>Estamos buscando los próximos eventos gratuitos.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Reintentar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>No encontramos planes para estos filtros.</h3><p>Prueba con otro mes, categoría o término de búsqueda.</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setQuery('') }}>Limpiar filtros</button></div>}</section>
+        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando la agenda...</h3><p>Estamos buscando los próximos eventos gratuitos.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Reintentar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>No encontramos planes para estos filtros.</h3><p>Prueba con otro mes, categoría o término de búsqueda.</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setQuery('') }}>Limpiar filtros</button></div>}</section>
       </main>
       <footer id="fuentes"><div className="footer-brand"><span className="brand-mark">P</span><strong>plan.lima</strong></div><p>Una guía independiente para encontrar lo que pasa en Lima.</p><span>Hecho con curiosidad · 2026</span></footer>
 
-      {selected && <EventModal event={selected} onClose={() => setSelected(null)} />}
+      {selected && <EventModal event={selected} onClose={closeSelected} />}
     </div>
   )
 }
@@ -98,16 +101,34 @@ function EventCard({ event, index, onOpen }: { event: EventItem; index: number; 
 
 function EventModal({ event, onClose }: { event: EventItem; onClose: () => void }) {
   const closeButton = useRef<HTMLButtonElement>(null)
+  const modal = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null
     closeButton.current?.focus()
-    const handleKeyDown = (keyboardEvent: KeyboardEvent) => { if (keyboardEvent.key === 'Escape') onClose() }
+    const handleKeyDown = (keyboardEvent: KeyboardEvent) => {
+      if (keyboardEvent.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (keyboardEvent.key !== 'Tab' || !modal.current) return
+      const focusable = Array.from(modal.current.querySelectorAll<HTMLElement>('button, a[href], [tabindex]:not([tabindex="-1"])'))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (keyboardEvent.shiftKey && document.activeElement === first) {
+        keyboardEvent.preventDefault()
+        last.focus()
+      } else if (!keyboardEvent.shiftKey && document.activeElement === last) {
+        keyboardEvent.preventDefault()
+        first.focus()
+      }
+    }
     document.addEventListener('keydown', handleKeyDown)
     document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', handleKeyDown); document.body.style.overflow = ''; previousFocus?.focus() }
   }, [onClose])
 
-  return <div className="modal-backdrop" onClick={onClose}><div className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButton} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} /></button><img className="modal-image" src={event.image} alt={event.title} onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}, Lima</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.registrationUrl ?? event.sourceUrl} target="_blank" rel="noreferrer">{event.requiresRegistration ? 'Inscribirme' : 'Ver información'} <ExternalLink size={16} /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
+  return <div className="modal-backdrop" onClick={onClose}><div ref={modal} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButton} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}, Lima</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.registrationUrl ?? event.sourceUrl} target="_blank" rel="noreferrer">{event.requiresRegistration ? 'Inscribirme' : 'Ver información'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
 }
 
 export default App
