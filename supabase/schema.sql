@@ -37,3 +37,20 @@ using (
 );
 
 create index events_public_dates_idx on public.events (department, status, price_type, start_date, end_date);
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists events_set_updated_at on public.events;
+
+create trigger events_set_updated_at
+before update on public.events
+for each row
+execute function public.set_updated_at();

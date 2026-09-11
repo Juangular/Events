@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# Events
-=======
 # Plan Lima
 
 Guía pública de eventos gratuitos en Lima. El frontend está construido con React, TypeScript y Vite; los eventos publicados se leen desde Supabase.
@@ -26,6 +23,7 @@ Sin `.env.local`, el entorno de desarrollo usa datos locales de demostración. E
 ```bash
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-clave-anon
+VITE_SITE_URL=https://tu-dominio.com
 ```
 
 La clave `anon` puede estar en el frontend porque las políticas RLS solo permiten leer eventos publicados, gratuitos, vigentes y de Lima. Nunca usar la `service_role` en este proyecto frontend.
@@ -62,9 +60,11 @@ La gestión mínima del contenido se realiza en el dashboard de Supabase. No exi
    - Framework: `Vite`
    - Build command: `npm run build`
    - Output directory: `dist`
-4. Añadir `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en las variables de entorno de Vercel para `Production` y `Preview`.
+4. Añadir `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y `VITE_SITE_URL` en las variables de entorno de Vercel para `Production` y `Preview`.
 5. Desplegar.
 6. Abrir la URL pública y confirmar que los eventos vienen de Supabase.
+
+`VITE_SITE_URL` permite generar automáticamente `sitemap.xml` y completar el enlace del sitemap en `robots.txt` durante el build de producción.
 
 Netlify puede usarse de forma equivalente con el mismo comando de build y directorio de salida.
 
@@ -97,4 +97,3 @@ En la URL desplegada comprobar:
 - Sustituir cualquier imagen de prueba por imágenes autorizadas.
 - Añadir un canal de contacto visible y un aviso breve de verificación en la fuente oficial.
 - Opcionalmente conectar un dominio propio; la URL gratuita de Vercel/Netlify permite validar el MVP inicialmente.
->>>>>>> 1be9bf0 (Initial commit)
