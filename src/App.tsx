@@ -59,17 +59,16 @@ function App() {
       <a className="skip-link" href="#top">Saltar al contenido principal</a>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Plan Lima, inicio"><span className="brand-mark">P</span><span>plan<span className="brand-dot">.</span>lima</span></a>
-        <nav className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal"><a href="#eventos" onClick={() => setMenuOpen(false)}>Explorar</a><a href="#como-funciona" onClick={() => setMenuOpen(false)}>Cómo funciona</a><a href="#fuentes" onClick={() => setMenuOpen(false)}>Fuentes</a></nav>
-        <span className="admin-link">Agenda abierta <ArrowUpRight size={15} /></span>
+        <nav className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal"><a href="#eventos" onClick={() => setMenuOpen(false)}>Explorar</a><a href="#eventos" onClick={() => setMenuOpen(false)}>Eventos</a></nav>
         <button className="menu-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Menu size={22} /></button>
       </header>
 
       <main id="top" tabIndex={-1}>
-        <section className="hero" id="como-funciona">
+        <section className="hero">
           <div className="hero-copy">
-            <div className="eyebrow"><span className="eyebrow-line" /> Agenda abierta de Lima</div>
+            <div className="eyebrow"><span className="eyebrow-line" /> Eventos gratuitos en Lima</div>
             <h1>Haz espacio<br /><em>para algo nuevo.</em></h1>
-            <p className="hero-intro">Una selección curada de eventos gratuitos para vivir Lima de otra manera.</p>
+            <p className="hero-intro">Una selección de eventos gratuitos para vivir Lima de otra manera.</p>
           </div>
           <div className="hero-note"><Sparkles size={17} /><span>Actualizado<br /><strong>esta semana</strong></span></div>
           <div className="hero-stamp">LIM<br /><span>26</span></div>
