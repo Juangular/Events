@@ -56,3 +56,47 @@ create trigger events_set_updated_at
 before update on public.events
 for each row
 execute function public.set_updated_at();
+
+create table if not exists public.places (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text not null,
+  category text not null check (category in ('Historia y patrimonio', 'Cultura y museos', 'Parques y naturaleza', 'Miradores y paseos', 'Playas', 'Barrios y arquitectura')),
+  image_url text,
+  area text not null check (area = 'Lima'),
+  district text not null,
+  address text not null,
+  hours text not null,
+  source text not null,
+  source_url text not null,
+  price_type text not null default 'free' check (price_type in ('free', 'paid')),
+  status text not null default 'draft' check (status in ('draft', 'published', 'inactive')),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.places drop constraint if exists places_area_check;
+alter table public.places add constraint places_area_check check (area = 'Lima');
+
+alter table public.places enable row level security;
+
+drop policy if exists "Public can read free published places" on public.places;
+
+create policy "Public can read free published places"
+on public.places for select
+to anon, authenticated
+using (
+  status = 'published'
+  and price_type = 'free'
+  and area = 'Lima'
+);
+
+create index if not exists places_public_order_idx on public.places (status, price_type, area, sort_order);
+
+drop trigger if exists places_set_updated_at on public.places;
+
+create trigger places_set_updated_at
+before update on public.places
+for each row
+execute function public.set_updated_at();

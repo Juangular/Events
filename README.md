@@ -52,6 +52,20 @@ Antes de publicar cada registro, verificar manualmente que:
 
 La gestión mínima del contenido se realiza en el dashboard de Supabase. No existe un panel administrativo público y no debe exponerse uno sin autenticación.
 
+## Cargar lugares recomendados
+
+La tabla `places` también se crea al ejecutar todo `supabase/schema.sql`. Para publicar un lugar desde `Supabase > Table Editor > places`, usar como mínimo:
+
+- `status`: `published`
+- `price_type`: `free`
+- `area`: `Lima`
+- `name`, `description`, `category`
+- `district`, `address`, `hours`
+- `source`, `source_url`
+- `sort_order`: posición editorial de la tarjeta
+
+Antes de publicar cada lugar, verificar manualmente que el acceso sea gratuito, la dirección y el horario estén vigentes, la fuente oficial funcione y la imagen pueda utilizarse públicamente. En desarrollo, cuando no hay variables de Supabase, la interfaz usa 15 lugares locales de demostración; producción siempre requiere registros publicados en Supabase. `price_type` conserva el valor `paid` para una futura ampliación, pero la consulta pública actual solo muestra `free`.
+
 ## Despliegue en Vercel
 
 1. Crear un repositorio Git y subir el proyecto sin `.env.local`.

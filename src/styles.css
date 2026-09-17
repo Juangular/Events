@@ -38,3 +38,28 @@ footer { background: var(--ink); color: #aeb9ae; padding: 35px max(5.2vw, calc((
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+.places-section { background: #ebe5da; padding: 75px max(5.2vw, calc((100vw - 1200px)/2)) 110px; }
+.places-heading { display: flex; justify-content: space-between; align-items: end; }
+.places-heading h2 { font: 500 33px Fraunces, serif; margin: 10px 0 0; letter-spacing: -.8px; }
+.places-intro { color: var(--muted); font-size: 15px; line-height: 1.55; margin: 20px 0 0; max-width: 470px; }
+.places-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 42px 22px; margin-top: 36px; }
+.place-card { cursor: pointer; animation: rise .6s both; animation-delay: var(--delay); }
+.place-image-wrap { height: 220px; overflow: hidden; position: relative; background: #d4d1c8; }
+.place-image-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.place-card:hover img { transform: scale(1.045); }
+.place-content { padding-top: 17px; }
+.place-content h3 { font: 500 23px/1.1 Fraunces, serif; margin: 10px 0 15px; letter-spacing: -.3px; }
+.place-card:focus-visible { outline: 3px solid var(--orange); outline-offset: 5px; }
+.place-location, .place-entry, .place-description { border-top: 1px solid var(--line); padding: 18px 0; display: flex; flex-direction: column; gap: 7px; }
+.place-location span, .place-entry span, .place-description span { color: var(--muted); text-transform: uppercase; font: 10px 'DM Mono'; }
+.place-location strong, .place-entry strong { font-size: 13px; line-height: 1.45; }
+.place-description p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; }
+
+@media (max-width: 760px) {
+  .places-section { padding: 53px 22px 75px; }
+  .places-heading { align-items: start; flex-direction: column; gap: 12px; }
+  .places-heading h2 { font-size: 29px; }
+  .places-grid { grid-template-columns: 1fr; gap: 38px; }
+  .place-image-wrap { height: 225px; }
+}

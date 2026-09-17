@@ -1,5 +1,6 @@
 export type Category = 'Cultura' | 'Música' | 'Deportes' | 'Educación' | 'Tecnología' | 'Gastronomía' | 'Familiar' | 'Otros'
 export type Modality = 'Presencial' | 'Virtual'
+export type PlaceCategory = 'Historia y patrimonio' | 'Cultura y museos' | 'Parques y naturaleza' | 'Miradores y paseos' | 'Playas' | 'Barrios y arquitectura'
 
 export interface EventItem {
   id: string
@@ -42,4 +43,36 @@ export interface EventRow {
   price_type: 'free' | 'paid'
   status: 'draft' | 'published' | 'cancelled' | 'finished' | 'inactive'
   tags: string[] | null
+}
+
+export interface PlaceItem {
+  id: string
+  name: string
+  description: string
+  category: PlaceCategory
+  image: string
+  area: 'Lima'
+  district: string
+  address: string
+  hours: string
+  source: string
+  sourceUrl: string
+  priceType: 'free' | 'paid'
+}
+
+export interface PlaceRow {
+  id: string
+  name: string
+  description: string
+  category: PlaceCategory
+  image_url: string | null
+  area: 'Lima'
+  district: string
+  address: string
+  hours: string
+  source: string
+  source_url: string
+  price_type: 'free' | 'paid'
+  status: 'draft' | 'published' | 'inactive'
+  sort_order: number
 }
