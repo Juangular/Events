@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { ErrorBoundary } from './ErrorBoundary'
 import './styles.css'
 
 const siteUrl = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '')
@@ -21,14 +22,20 @@ if (siteUrl) {
 
   const structuredData = document.querySelector<HTMLScriptElement>('script[type="application/ld+json"]')
   if (structuredData) {
-    const website = JSON.parse(structuredData.textContent ?? '{}') as Record<string, unknown>
-    website.url = `${siteUrl}/`
-    structuredData.textContent = JSON.stringify(website)
+    try {
+      const website = JSON.parse(structuredData.textContent ?? '{}') as Record<string, unknown>
+      website.url = `${siteUrl}/`
+      structuredData.textContent = JSON.stringify(website)
+    } catch {
+      console.warn('No se pudo actualizar el structured data')
+    }
   }
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 )

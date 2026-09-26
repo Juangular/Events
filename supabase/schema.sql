@@ -45,7 +45,7 @@ using (
   status = 'published'
   and price_type = 'free'
   and department = 'Lima'
-  and coalesce(end_date, start_date) >= current_date
+  and coalesce(end_date, start_date) >= (now() at time zone 'America/Lima')::date
 );
 
 create index if not exists events_public_dates_idx on public.events (department, status, price_type, start_date, end_date);

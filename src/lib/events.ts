@@ -1,29 +1,13 @@
 import { supabase } from './supabase'
 import { events as fallbackEvents } from '../data'
 import type { EventItem, EventRow } from '../types'
+import { isValidDateKey, isValidHttpsUrl, isValidImageUrl, isValidTimestamp } from './validation'
 
 const fallbackImage = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=85'
 const categories = new Set(['Cultura', 'Música', 'Deportes', 'Educación', 'Tecnología', 'Gastronomía', 'Familiar', 'Otros'])
 const modalities = new Set(['Presencial', 'Virtual'])
 const prices = new Set(['free', 'paid'])
 const statuses = new Set(['draft', 'published', 'cancelled', 'finished', 'inactive'])
-
-function isValidDateKey(value: string) {
-  const date = new Date(`${value}T12:00:00`)
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value)
-}
-
-function isValidHttpsUrl(value: string) {
-  try {
-    return new URL(value).protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
-function isValidTimestamp(value: string) {
-  return !Number.isNaN(Date.parse(value))
-}
 
 function isEventRow(value: unknown): value is EventRow {
   if (!value || typeof value !== 'object') return false
@@ -33,6 +17,7 @@ function isEventRow(value: unknown): value is EventRow {
     && typeof row.description === 'string' && row.description.trim().length > 0
     && typeof row.category === 'string' && categories.has(row.category)
     && typeof row.modality === 'string' && modalities.has(row.modality)
+    && (row.image_url === null || (typeof row.image_url === 'string' && isValidImageUrl(row.image_url)))
     && typeof row.start_date === 'string' && isValidDateKey(row.start_date)
     && (row.end_date === null || (typeof row.end_date === 'string' && isValidDateKey(row.end_date) && row.end_date >= row.start_date))
     && typeof row.time === 'string' && row.time.trim().length > 0

@@ -1,6 +1,7 @@
 import { places as fallbackPlaces } from '../data'
 import type { PlaceItem, PlaceRow } from '../types'
 import { supabase } from './supabase'
+import { isValidImageUrl, isValidTimestamp } from './validation'
 
 const categories = new Set(['Historia y patrimonio', 'Cultura y museos', 'Parques y naturaleza', 'Miradores y paseos', 'Playas', 'Barrios y arquitectura'])
 const areas = new Set(['Lima'])
@@ -8,7 +9,7 @@ const prices = new Set(['free', 'paid'])
 const statuses = new Set(['draft', 'published', 'inactive'])
 const fallbackImage = 'https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=1200&q=85'
 
-function isValidHttpsUrl(value: string) {
+function isValidGoogleMapsUrl(value: string) {
   try {
     const url = new URL(value)
     const hostname = url.hostname.toLowerCase()
@@ -22,10 +23,6 @@ function isValidHttpsUrl(value: string) {
   }
 }
 
-function isValidTimestamp(value: string) {
-  return !Number.isNaN(Date.parse(value))
-}
-
 function isPlaceRow(value: unknown): value is PlaceRow {
   if (!value || typeof value !== 'object') return false
   const row = value as Partial<PlaceRow>
@@ -33,13 +30,13 @@ function isPlaceRow(value: unknown): value is PlaceRow {
     && typeof row.name === 'string' && row.name.trim().length > 0
     && typeof row.description === 'string' && row.description.trim().length > 0
     && typeof row.category === 'string' && categories.has(row.category)
-    && (row.image_url === null || typeof row.image_url === 'string')
+    && (row.image_url === null || (typeof row.image_url === 'string' && isValidImageUrl(row.image_url)))
     && typeof row.area === 'string' && areas.has(row.area)
     && typeof row.district === 'string' && row.district.trim().length > 0
     && typeof row.address === 'string' && row.address.trim().length > 0
     && typeof row.hours === 'string'
     && typeof row.source === 'string'
-    && typeof row.source_url === 'string' && isValidHttpsUrl(row.source_url)
+    && typeof row.source_url === 'string' && isValidGoogleMapsUrl(row.source_url)
     && typeof row.price_type === 'string' && prices.has(row.price_type)
     && typeof row.status === 'string' && statuses.has(row.status)
     && typeof row.sort_order === 'number'

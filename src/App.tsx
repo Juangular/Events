@@ -10,25 +10,38 @@ const currentDate = new Date()
 const currentYear = currentDate.getFullYear()
 const fallbackImage = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=85'
 
-function parseDate(value: string) { return new Date(`${value}T12:00:00`) }
-function getLocalDateKey() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+const LIMA_TIME_ZONE = 'America/Lima'
+
+function getLimaDateParts(date: Date) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: LIMA_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
 }
+
+function getLocalDateKey() {
+  const parts = getLimaDateParts(new Date())
+  const getPart = (type: string) => parts.find((part) => part.type === type)?.value
+  return `${getPart('year')}-${getPart('month')}-${getPart('day')}`
+}
+
 function formatUpdatedAt(value?: string) {
   if (!value) return 'localmente'
-  return new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value))
+  return new Intl.DateTimeFormat('es-PE', { timeZone: LIMA_TIME_ZONE, day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value))
 }
+
 function formatDate(value: string, endDate?: string) {
-  const start = parseDate(value)
-  const end = endDate ? parseDate(endDate) : undefined
-  const startLabel = `${start.getDate()} ${monthNames[start.getMonth()].slice(0, 3).toLowerCase()}`
-  return end ? `${startLabel} – ${end.getDate()} ${monthNames[end.getMonth()].slice(0, 3).toLowerCase()}` : startLabel
+  const format = (dateValue: string) => {
+    const [year, month, day] = dateValue.split('-').map(Number)
+    const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+    return new Intl.DateTimeFormat('es-PE', { timeZone: LIMA_TIME_ZONE, day: 'numeric', month: 'short' }).format(date)
+  }
+  const startLabel = format(value)
+  return endDate ? `${startLabel} – ${format(endDate)}` : startLabel
 }
+
 function overlapsMonth(event: EventItem, month: number, year: number) {
-  const first = new Date(year, month, 1)
-  const last = new Date(year, month + 1, 0, 23, 59, 59)
-  return parseDate(event.startDate) <= last && parseDate(event.endDate ?? event.startDate) >= first
+  const first = `${year}-${String(month + 1).padStart(2, '0')}-01`
+  const lastDay = new Date(year, month + 1, 0).getDate()
+  const last = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  return event.startDate <= last && (event.endDate ?? event.startDate) >= first
 }
 
 function App() {
@@ -43,11 +56,13 @@ function App() {
   const [category, setCategory] = useState<(typeof categories)[number]>('Todas')
   const [modality, setModality] = useState('Todas')
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selected, setSelected] = useState<EventItem | null>(null)
   const [selectedPlace, setSelectedPlace] = useState<PlaceItem | null>(null)
   const [mobileFilters, setMobileFilters] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuButton = useRef<HTMLButtonElement>(null)
+  const menuNav = useRef<HTMLElement>(null)
 
   const closeSelected = useCallback(() => setSelected(null), [])
   const closeSelectedPlace = useCallback(() => setSelectedPlace(null), [])
@@ -61,11 +76,29 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedQuery(query.trim()), 200)
+    return () => clearTimeout(timeout)
+  }, [query])
+
+  useEffect(() => {
     if (!menuOpen) return
     const handleKeyDown = (keyboardEvent: KeyboardEvent) => {
       if (keyboardEvent.key === 'Escape') {
         setMenuOpen(false)
         menuButton.current?.focus()
+        return
+      }
+      if (keyboardEvent.key !== 'Tab' || !menuNav.current) return
+      const focusable = Array.from(menuNav.current.querySelectorAll<HTMLElement>('a[href], button'))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (keyboardEvent.shiftKey && document.activeElement === first) {
+        keyboardEvent.preventDefault()
+        last.focus()
+      } else if (!keyboardEvent.shiftKey && document.activeElement === last) {
+        keyboardEvent.preventDefault()
+        first.focus()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
@@ -77,10 +110,10 @@ function App() {
     const matchesCurrent = (event.endDate ?? event.startDate) >= getLocalDateKey()
     const matchesCategory = category === 'Todas' || event.category === category
     const matchesModality = modality === 'Todas' || event.modality === modality
-    const search = query.toLowerCase().trim()
+    const search = debouncedQuery.toLowerCase()
     const matchesQuery = !search || `${event.title} ${event.description} ${event.place} ${event.category}`.toLowerCase().includes(search)
     return matchesMonth && matchesCurrent && matchesCategory && matchesModality && matchesQuery
-  }).sort((a, b) => a.startDate.localeCompare(b.startDate)), [events, month, year, category, modality, query])
+  }).sort((a, b) => a.startDate.localeCompare(b.startDate)), [events, month, year, category, modality, debouncedQuery])
 
   const shiftMonth = (direction: number) => {
     const next = new Date(year, month + direction, 1)
@@ -98,7 +131,7 @@ function App() {
       <a className="skip-link" href="#top">Saltar al contenido principal</a>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Plan Lima, inicio"><span className="brand-mark">P</span><span>plan<span className="brand-dot">.</span>lima</span></a>
-        <nav id="main-navigation" className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal"><a href="#eventos" onClick={() => setMenuOpen(false)}>Explorar</a><a href="#eventos" onClick={() => setMenuOpen(false)}>Eventos</a><a href="#lugares" onClick={() => setMenuOpen(false)}>Lugares</a></nav>
+        <nav ref={menuNav} id="main-navigation" className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal"><a href="#eventos" onClick={() => setMenuOpen(false)}>Explorar</a><a href="#eventos" onClick={() => setMenuOpen(false)}>Eventos</a><a href="#lugares" onClick={() => setMenuOpen(false)}>Lugares</a></nav>
         <button ref={menuButton} className="menu-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(!menuOpen)}><Menu size={22} aria-hidden="true" /></button>
       </header>
 
@@ -145,7 +178,13 @@ function EventCard({ event, index, onOpen }: { event: EventItem; index: number; 
 }
 
 function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; onOpen: (place: PlaceItem) => void }) {
-  return <article className="place-card" role="button" tabIndex={0} aria-label={`Ver detalles de ${place.name}`} style={{ '--delay': `${index * 50}ms` } as React.CSSProperties} onClick={() => onOpen(place)} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') { keyboardEvent.preventDefault(); onOpen(place) } }}><div className="place-image-wrap"><img src={place.image} alt={place.name} loading={index > 2 ? 'lazy' : 'eager'} decoding="async" onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><span className="free-badge">{place.priceType === 'free' ? 'GRATIS' : 'DE PAGO'}</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div><div className="place-content"><h3>{place.name}</h3><div className="card-place"><MapPin size={14} /> {place.district}</div><a className="maps-button" href={place.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}><MapPin size={14} aria-hidden="true" /> Ver en Google Maps</a></div></article>
+  return <article className="place-card" style={{ '--delay': `${index * 50}ms` } as React.CSSProperties}>
+    <button className="place-card-trigger" aria-label={`Ver detalles de ${place.name}`} onClick={() => onOpen(place)}>
+      <div className="place-image-wrap"><img src={place.image} alt={place.name} loading={index > 2 ? 'lazy' : 'eager'} decoding="async" onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><span className="free-badge">{place.priceType === 'free' ? 'GRATIS' : 'DE PAGO'}</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div>
+      <div className="place-content"><h3>{place.name}</h3><div className="card-place"><MapPin size={14} /> {place.district}</div></div>
+    </button>
+    <a className="maps-button" href={place.sourceUrl} target="_blank" rel="noopener noreferrer"><MapPin size={14} aria-hidden="true" /> Ver en Google Maps</a>
+  </article>
 }
 
 function EventModal({ event, onClose }: { event: EventItem; onClose: () => void }) {
