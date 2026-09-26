@@ -20,6 +20,7 @@ export interface EventItem {
   registrationUrl?: string
   requiresRegistration?: boolean
   tags: string[]
+  updatedAt?: string
 }
 
 export interface EventRow {
@@ -43,6 +44,7 @@ export interface EventRow {
   price_type: 'free' | 'paid'
   status: 'draft' | 'published' | 'cancelled' | 'finished' | 'inactive'
   tags: string[] | null
+  updated_at: string
 }
 
 export interface PlaceItem {
@@ -58,6 +60,7 @@ export interface PlaceItem {
   source: string
   sourceUrl: string
   priceType: 'free' | 'paid'
+  updatedAt?: string
 }
 
 export interface PlaceRow {
@@ -75,4 +78,5 @@ export interface PlaceRow {
   price_type: 'free' | 'paid'
   status: 'draft' | 'published' | 'inactive'
   sort_order: number
+  updated_at: string
 }

@@ -21,8 +21,18 @@ create table if not exists public.events (
   tags text[] not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint valid_event_dates check (end_date is null or end_date >= start_date)
+  constraint valid_event_dates check (end_date is null or end_date >= start_date),
+  constraint valid_event_content check (length(trim(title)) > 0 and length(trim(description)) > 0 and length(trim(time)) > 0 and length(trim(place)) > 0 and length(trim(organizer)) > 0 and length(trim(source)) > 0),
+  constraint valid_event_urls check (source_url ~ '^https://[^[:space:]]+$' and (registration_url is null or registration_url ~ '^https://[^[:space:]]+$')),
+  constraint registration_url_required check (not requires_registration or registration_url is not null)
 );
+
+alter table public.events drop constraint if exists valid_event_content;
+alter table public.events add constraint valid_event_content check (length(trim(title)) > 0 and length(trim(description)) > 0 and length(trim(time)) > 0 and length(trim(place)) > 0 and length(trim(organizer)) > 0 and length(trim(source)) > 0);
+alter table public.events drop constraint if exists valid_event_urls;
+alter table public.events add constraint valid_event_urls check (source_url ~ '^https://[^[:space:]]+$' and (registration_url is null or registration_url ~ '^https://[^[:space:]]+$'));
+alter table public.events drop constraint if exists registration_url_required;
+alter table public.events add constraint registration_url_required check (not requires_registration or registration_url is not null);
 
 alter table public.events enable row level security;
 
@@ -73,8 +83,15 @@ create table if not exists public.places (
   status text not null default 'draft' check (status in ('draft', 'published', 'inactive')),
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint valid_place_content check (length(trim(name)) > 0 and length(trim(description)) > 0 and length(trim(district)) > 0 and length(trim(address)) > 0 and length(trim(hours)) > 0 and length(trim(source)) > 0),
+  constraint valid_place_url check (source_url ~ '^https://(www\.)?google\.com/maps/.*$' or source_url ~ '^https://maps\.google\.com/.*$' or source_url ~ '^https://maps\.app\.goo\.gl/.*$' or source_url ~ '^https://goo\.gl/maps/.*$')
 );
+
+alter table public.places drop constraint if exists valid_place_content;
+alter table public.places add constraint valid_place_content check (length(trim(name)) > 0 and length(trim(description)) > 0 and length(trim(district)) > 0 and length(trim(address)) > 0 and length(trim(hours)) > 0 and length(trim(source)) > 0);
+alter table public.places drop constraint if exists valid_place_url;
+alter table public.places add constraint valid_place_url check (source_url ~ '^https://(www\.)?google\.com/maps/.*$' or source_url ~ '^https://maps\.google\.com/.*$' or source_url ~ '^https://maps\.app\.goo\.gl/.*$' or source_url ~ '^https://goo\.gl/maps/.*$');
 
 alter table public.places drop constraint if exists places_area_check;
 alter table public.places add constraint places_area_check check (area = 'Lima');

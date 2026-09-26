@@ -12,6 +12,8 @@ npm run dev
 
 Sin `.env.local`, el entorno de desarrollo usa datos locales de demostración. El build de producción no lo hace: exige Supabase para evitar publicar datos ficticios accidentalmente.
 
+`.env.local` nunca debe añadirse al repositorio. Si alguna clave sensible se versionó por accidente, revocarla o rotarla en el proveedor antes de continuar. La clave `anon`/publishable de Supabase está diseñada para el navegador, pero sigue siendo recomendable mantenerla solo en las variables de entorno del entorno correspondiente.
+
 ## Configurar Supabase
 
 1. Crear un proyecto gratuito en [supabase.com](https://supabase.com).
@@ -27,6 +29,8 @@ VITE_SITE_URL=https://tu-dominio.com
 ```
 
 La clave `anon` puede estar en el frontend porque las políticas RLS solo permiten leer eventos publicados, gratuitos, vigentes y de Lima. Nunca usar la `service_role` en este proyecto frontend.
+
+La aplicación interpreta las fechas de eventos como fechas de calendario en la zona horaria de Lima. Un evento se mantiene visible durante todo su `end_date`; si no tiene fecha final, se considera vigente durante todo su `start_date`.
 
 ## Cargar eventos reales
 
@@ -50,6 +54,8 @@ Antes de publicar cada registro, verificar manualmente que:
 - la inscripción sea gratuita si se requiere registro;
 - la imagen pueda utilizarse públicamente.
 
+Los enlaces `source_url` y `registration_url` deben usar `https://`. Si `requires_registration` es `true`, `registration_url` es obligatorio.
+
 La gestión mínima del contenido se realiza en el dashboard de Supabase. No existe un panel administrativo público y no debe exponerse uno sin autenticación.
 
 ## Cargar lugares recomendados
@@ -61,10 +67,15 @@ La tabla `places` también se crea al ejecutar todo `supabase/schema.sql`. Para 
 - `area`: `Lima`
 - `name`, `description`, `category`
 - `district`, `address`, `hours`
-- `source`, `source_url`
+- `source`: fuente o entidad responsable del lugar
+- `source_url`: enlace de ubicación de Google Maps
 - `sort_order`: posición editorial de la tarjeta
 
-Antes de publicar cada lugar, verificar manualmente que el acceso sea gratuito, la dirección y el horario estén vigentes, la fuente oficial funcione y la imagen pueda utilizarse públicamente. En desarrollo, cuando no hay variables de Supabase, la interfaz usa 15 lugares locales de demostración; producción siempre requiere registros publicados en Supabase. `price_type` conserva el valor `paid` para una futura ampliación, pero la consulta pública actual solo muestra `free`.
+Antes de publicar cada lugar, verificar manualmente que el acceso sea gratuito, la dirección y el horario estén vigentes, el enlace de Google Maps corresponda al lugar y la imagen pueda utilizarse públicamente. En desarrollo, cuando no hay variables de Supabase, la interfaz usa 15 lugares locales de demostración; producción siempre requiere registros publicados en Supabase. `price_type` conserva el valor `paid` para una futura ampliación, pero la consulta pública actual solo muestra `free`.
+
+Cada tarjeta y cada detalle de lugar incluye un botón `Ver en Google Maps` que utiliza directamente `places.source_url`. Los registros publicados deben usar una URL HTTPS de Google Maps.
+
+La etiqueta `Actualizado` del encabezado muestra la fecha `updated_at` más reciente entre los eventos y lugares públicos cargados desde Supabase. En desarrollo sin Supabase muestra `localmente`.
 
 ## Despliegue en Vercel
 
@@ -98,8 +109,12 @@ En la URL desplegada comprobar:
 - exclusión de eventos terminados;
 - detalle de cada tarjeta;
 - enlaces oficiales e inscripción;
+- botón de ubicación de cada lugar en Google Maps;
 - vista móvil;
 - mensaje de error cuando Supabase no esté disponible.
+- navegación entre meses que cruce de año;
+- horario y fuente oficial en el detalle de cada lugar;
+- enlaces `https://` y datos de registro válidos.
 
 ## Pendientes operativos antes de hacerlo público
 
@@ -111,3 +126,10 @@ En la URL desplegada comprobar:
 - Sustituir cualquier imagen de prueba por imágenes autorizadas.
 - Añadir un canal de contacto visible y un aviso breve de verificación en la fuente oficial.
 - Opcionalmente conectar un dominio propio; la URL gratuita de Vercel/Netlify permite validar el MVP inicialmente.
+
+## Mantenimiento recomendado
+
+- Revisar semanalmente que las fechas, horarios, imágenes y enlaces publicados sigan vigentes.
+- Ejecutar `npm run build` antes de cada despliegue.
+- Configurar `VITE_SITE_URL` solo en los entornos que deban aparecer en buscadores; las previews pueden mantenerse fuera del índice.
+- Después de cambios de esquema, ejecutar nuevamente todo `supabase/schema.sql` y revisar los datos existentes si se añaden restricciones nuevas.

@@ -9,6 +9,22 @@ if (siteUrl) {
   canonical.rel = 'canonical'
   canonical.href = `${siteUrl}/`
   document.head.appendChild(canonical)
+
+  const ogUrl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]')
+  if (ogUrl) ogUrl.content = `${siteUrl}/`
+
+  const ogImage = document.querySelector<HTMLMetaElement>('meta[property="og:image"]')
+  if (ogImage) ogImage.content = `${siteUrl}/og-image.svg`
+
+  const twitterImage = document.querySelector<HTMLMetaElement>('meta[name="twitter:image"]')
+  if (twitterImage) twitterImage.content = `${siteUrl}/og-image.svg`
+
+  const structuredData = document.querySelector<HTMLScriptElement>('script[type="application/ld+json"]')
+  if (structuredData) {
+    const website = JSON.parse(structuredData.textContent ?? '{}') as Record<string, unknown>
+    website.url = `${siteUrl}/`
+    structuredData.textContent = JSON.stringify(website)
+  }
 }
 
 createRoot(document.getElementById('root')!).render(

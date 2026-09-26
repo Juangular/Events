@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f5f0e8"/>
+  <circle cx="1040" cy="110" r="220" fill="#315d45"/>
+  <circle cx="170" cy="535" r="180" fill="#e65f31"/>
+  <text x="90" y="250" fill="#18251f" font-family="Georgia, serif" font-size="112">plan.lima</text>
+  <text x="98" y="330" fill="#315d45" font-family="Arial, sans-serif" font-size="30" letter-spacing="4">EVENTOS GRATUITOS EN LIMA</text>
+</svg>

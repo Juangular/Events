@@ -8,25 +8,46 @@ const modalities = new Set(['Presencial', 'Virtual'])
 const prices = new Set(['free', 'paid'])
 const statuses = new Set(['draft', 'published', 'cancelled', 'finished', 'inactive'])
 
+function isValidDateKey(value: string) {
+  const date = new Date(`${value}T12:00:00`)
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value)
+}
+
+function isValidHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function isValidTimestamp(value: string) {
+  return !Number.isNaN(Date.parse(value))
+}
+
 function isEventRow(value: unknown): value is EventRow {
   if (!value || typeof value !== 'object') return false
   const row = value as Partial<EventRow>
   return typeof row.id === 'string'
-    && typeof row.title === 'string'
-    && typeof row.description === 'string'
+    && typeof row.title === 'string' && row.title.trim().length > 0
+    && typeof row.description === 'string' && row.description.trim().length > 0
     && typeof row.category === 'string' && categories.has(row.category)
     && typeof row.modality === 'string' && modalities.has(row.modality)
-    && typeof row.start_date === 'string'
-    && typeof row.time === 'string'
-    && typeof row.place === 'string'
-    && typeof row.department === 'string'
-    && typeof row.organizer === 'string'
-    && typeof row.source === 'string'
-    && typeof row.source_url === 'string'
+    && typeof row.start_date === 'string' && isValidDateKey(row.start_date)
+    && (row.end_date === null || (typeof row.end_date === 'string' && isValidDateKey(row.end_date) && row.end_date >= row.start_date))
+    && typeof row.time === 'string' && row.time.trim().length > 0
+    && typeof row.place === 'string' && row.place.trim().length > 0
+    && row.department === 'Lima'
+    && typeof row.organizer === 'string' && row.organizer.trim().length > 0
+    && typeof row.source === 'string' && row.source.trim().length > 0
+    && typeof row.source_url === 'string' && isValidHttpsUrl(row.source_url)
+    && (row.registration_url === null || (typeof row.registration_url === 'string' && isValidHttpsUrl(row.registration_url)))
     && typeof row.requires_registration === 'boolean'
+    && (!row.requires_registration || row.registration_url !== null)
     && typeof row.price_type === 'string' && prices.has(row.price_type)
     && typeof row.status === 'string' && statuses.has(row.status)
-    && (row.tags === null || Array.isArray(row.tags))
+    && (row.tags === null || (Array.isArray(row.tags) && row.tags.every((tag) => typeof tag === 'string')))
+    && typeof row.updated_at === 'string' && isValidTimestamp(row.updated_at)
 }
 
 function mapRow(row: EventRow): EventItem {
@@ -48,6 +69,7 @@ function mapRow(row: EventRow): EventItem {
     registrationUrl: row.registration_url || undefined,
     requiresRegistration: row.requires_registration,
     tags: row.tags || [],
+    updatedAt: row.updated_at,
   }
 }
 
@@ -59,7 +81,7 @@ export async function getPublicEvents(): Promise<EventItem[]> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('id,title,description,category,modality,image_url,start_date,end_date,time,place,district,department,organizer,source,source_url,registration_url,requires_registration,price_type,status,tags')
+    .select('id,title,description,category,modality,image_url,start_date,end_date,time,place,district,department,organizer,source,source_url,registration_url,requires_registration,price_type,status,tags,updated_at')
     .eq('status', 'published')
     .eq('price_type', 'free')
     .eq('department', 'Lima')

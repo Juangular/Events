@@ -43,7 +43,7 @@ export const events: EventItem[] = [
 
 const placeImage = 'https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=1200&q=85'
 
-export const places: PlaceItem[] = [
+const fallbackPlaces: PlaceItem[] = [
   { id: 'centro-historico-lima', name: 'Centro Histórico de Lima', description: 'Plazas, balcones y edificios que cuentan la historia de la ciudad desde su fundación.', category: 'Historia y patrimonio', image: placeImage, area: 'Lima', district: 'Cercado de Lima', address: 'Plaza Mayor de Lima', hours: 'Espacio público; consultar horarios de cada recinto', source: 'Municipalidad de Lima', sourceUrl: 'https://www.munlima.gob.pe', priceType: 'free' },
   { id: 'parque-reserva', name: 'Parque de la Reserva', description: 'Un parque urbano para caminar y conocer uno de los espacios públicos más emblemáticos de Lima.', category: 'Parques y naturaleza', image: 'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=85', area: 'Lima', district: 'Cercado de Lima', address: 'Jr. Madre de Dios s/n', hours: 'Consultar horarios vigentes', source: 'SERPAR', sourceUrl: 'https://www.serpar.gob.pe', priceType: 'free' },
   { id: 'malecon-miraflores', name: 'Malecón de Miraflores', description: 'Paseo frente al Pacífico con parques, arte urbano y vistas abiertas de la costa limeña.', category: 'Miradores y paseos', image: 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=85', area: 'Lima', district: 'Miraflores', address: 'Malecón de Miraflores', hours: 'Espacio público de acceso libre', source: 'Municipalidad de Miraflores', sourceUrl: 'https://www.miraflores.gob.pe', priceType: 'free' },
@@ -60,3 +60,8 @@ export const places: PlaceItem[] = [
   { id: 'parque-exposicion', name: 'Parque de la Exposición', description: 'Un parque céntrico con jardines, esculturas y arquitectura histórica para recorrer con calma.', category: 'Parques y naturaleza', image: 'https://images.unsplash.com/photo-1473445361085-b9a07f55608b?auto=format&fit=crop&w=1200&q=85', area: 'Lima', district: 'Cercado de Lima', address: 'Av. 28 de Julio s/n', hours: 'Consultar horarios de apertura', source: 'Municipalidad Metropolitana de Lima', sourceUrl: 'https://www.munlima.gob.pe', priceType: 'free' },
   { id: 'plaza-san-martin', name: 'Plaza San Martín', description: 'Una plaza histórica del Centro de Lima rodeada de arquitectura republicana y vida urbana.', category: 'Historia y patrimonio', image: 'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1200&q=85', area: 'Lima', district: 'Cercado de Lima', address: 'Plaza San Martín', hours: 'Espacio público de acceso libre', source: 'Municipalidad Metropolitana de Lima', sourceUrl: 'https://www.munlima.gob.pe', priceType: 'free' },
 ]
+
+export const places: PlaceItem[] = fallbackPlaces.map((place) => ({
+  ...place,
+  sourceUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${place.address}, Lima`)}`,
+}))
