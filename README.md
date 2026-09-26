@@ -66,14 +66,15 @@ La tabla `places` también se crea al ejecutar todo `supabase/schema.sql`. Para 
 - `price_type`: `free`
 - `area`: `Lima`
 - `name`, `description`, `category`
-- `district`, `address`, `hours`
-- `source`: fuente o entidad responsable del lugar
+- `district`, `address`
+- `hours`: opcional; se muestra cuando está disponible
+- `source`: opcional; entidad responsable o fuente oficial del lugar
 - `source_url`: enlace de ubicación de Google Maps
 - `sort_order`: posición editorial de la tarjeta
 
-Antes de publicar cada lugar, verificar manualmente que el acceso sea gratuito, la dirección y el horario estén vigentes, el enlace de Google Maps corresponda al lugar y la imagen pueda utilizarse públicamente. En desarrollo, cuando no hay variables de Supabase, la interfaz usa 15 lugares locales de demostración; producción siempre requiere registros publicados en Supabase. `price_type` conserva el valor `paid` para una futura ampliación, pero la consulta pública actual solo muestra `free`.
+Antes de publicar cada lugar, verificar manualmente que el acceso sea gratuito, la dirección esté vigente, el enlace de Google Maps corresponda al lugar y la imagen pueda utilizarse públicamente. Si se informa `hours` o `source`, verificar que sus datos estén actualizados. En desarrollo, cuando no hay variables de Supabase, la interfaz usa 15 lugares locales de demostración; producción siempre requiere registros publicados en Supabase. `price_type` conserva el valor `paid` para una futura ampliación, pero la consulta pública actual solo muestra `free`.
 
-Cada tarjeta y cada detalle de lugar incluye un botón `Ver en Google Maps` que utiliza directamente `places.source_url`. Los registros publicados deben usar una URL HTTPS de Google Maps.
+Cada tarjeta y cada detalle de lugar incluye un botón `Ver en Google Maps` que utiliza directamente `places.source_url`. Los registros publicados deben usar una URL HTTPS de Google Maps. Los campos `hours` y `source` pueden quedar vacíos; la interfaz oculta esas secciones cuando no tienen contenido.
 
 La etiqueta `Actualizado` del encabezado muestra la fecha `updated_at` más reciente entre los eventos y lugares públicos cargados desde Supabase. En desarrollo sin Supabase muestra `localmente`.
 

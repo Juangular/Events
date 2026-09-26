@@ -37,8 +37,8 @@ function isPlaceRow(value: unknown): value is PlaceRow {
     && typeof row.area === 'string' && areas.has(row.area)
     && typeof row.district === 'string' && row.district.trim().length > 0
     && typeof row.address === 'string' && row.address.trim().length > 0
-    && typeof row.hours === 'string' && row.hours.trim().length > 0
-    && typeof row.source === 'string' && row.source.trim().length > 0
+    && typeof row.hours === 'string'
+    && typeof row.source === 'string'
     && typeof row.source_url === 'string' && isValidHttpsUrl(row.source_url)
     && typeof row.price_type === 'string' && prices.has(row.price_type)
     && typeof row.status === 'string' && statuses.has(row.status)

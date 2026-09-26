@@ -84,12 +84,12 @@ create table if not exists public.places (
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint valid_place_content check (length(trim(name)) > 0 and length(trim(description)) > 0 and length(trim(district)) > 0 and length(trim(address)) > 0 and length(trim(hours)) > 0 and length(trim(source)) > 0),
+  constraint valid_place_content check (length(trim(name)) > 0 and length(trim(description)) > 0 and length(trim(district)) > 0 and length(trim(address)) > 0),
   constraint valid_place_url check (source_url ~ '^https://(www\.)?google\.com/maps/.*$' or source_url ~ '^https://maps\.google\.com/.*$' or source_url ~ '^https://maps\.app\.goo\.gl/.*$' or source_url ~ '^https://goo\.gl/maps/.*$')
 );
 
 alter table public.places drop constraint if exists valid_place_content;
-alter table public.places add constraint valid_place_content check (length(trim(name)) > 0 and length(trim(description)) > 0 and length(trim(district)) > 0 and length(trim(address)) > 0 and length(trim(hours)) > 0 and length(trim(source)) > 0);
+alter table public.places add constraint valid_place_content check (length(trim(name)) > 0 and length(trim(description)) > 0 and length(trim(district)) > 0 and length(trim(address)) > 0);
 alter table public.places drop constraint if exists valid_place_url;
 alter table public.places add constraint valid_place_url check (source_url ~ '^https://(www\.)?google\.com/maps/.*$' or source_url ~ '^https://maps\.google\.com/.*$' or source_url ~ '^https://maps\.app\.goo\.gl/.*$' or source_url ~ '^https://goo\.gl/maps/.*$');
 
