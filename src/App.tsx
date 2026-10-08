@@ -3,6 +3,7 @@ import { ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Ma
 import { categories } from './data'
 import { getPublicEvents } from './lib/events'
 import { getPublicPlaces } from './lib/places'
+import { useDialogLifecycle } from './hooks/useDialogLifecycle'
 import type { EventItem, PlaceItem } from './types'
 
 const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -68,11 +69,11 @@ function App() {
   const closeSelectedPlace = useCallback(() => setSelectedPlace(null), [])
 
   useEffect(() => {
-    getPublicEvents().then(setEvents).catch(() => setLoadError('No pudimos cargar la agenda. Intenta nuevamente en unos minutos.')).finally(() => setLoading(false))
+    getPublicEvents().then(setEvents).catch(() => setLoadError('No pudimos cargar los eventos.')).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
-    getPublicPlaces().then(setPlaces).catch(() => setPlacesError('No pudimos cargar los lugares recomendados.')).finally(() => setPlacesLoading(false))
+    getPublicPlaces().then(setPlaces).catch(() => setPlacesError('No pudimos cargar los lugares.')).finally(() => setPlacesLoading(false))
   }, [])
 
   useEffect(() => {
@@ -131,24 +132,25 @@ function App() {
       <a className="skip-link" href="#top">Saltar al contenido principal</a>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Plan Lima, inicio"><span className="brand-mark">P</span><span>plan<span className="brand-dot">.</span>lima</span></a>
-        <nav ref={menuNav} id="main-navigation" className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal"><a href="#eventos" onClick={() => setMenuOpen(false)}>Explorar</a><a href="#eventos" onClick={() => setMenuOpen(false)}>Eventos</a><a href="#lugares" onClick={() => setMenuOpen(false)}>Lugares</a></nav>
-        <button ref={menuButton} className="menu-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(!menuOpen)}><Menu size={22} aria-hidden="true" /></button>
+        <nav ref={menuNav} id="main-navigation" className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal"><a href="#eventos" onClick={() => setMenuOpen(false)}>Eventos</a><a href="#lugares" onClick={() => setMenuOpen(false)}>Lugares</a></nav>
+        <button ref={menuButton} className="menu-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}</button>
       </header>
 
       <main id="top" tabIndex={-1}>
         <section className="hero">
           <div className="hero-copy">
-            <div className="eyebrow"><span className="eyebrow-line" /> Eventos gratuitos en Lima</div>
-            <h1>Haz espacio<br /><em>para algo nuevo.</em></h1>
-            <p className="hero-intro">Una selección de eventos gratuitos para vivir Lima de otra manera.</p>
+            <div className="eyebrow"><span className="eyebrow-line" /> Eventos y lugares de Lima</div>
+            <h1>Planes gratis<br /><em>en Lima.</em></h1>
+            <p className="hero-intro">Busca conciertos, talleres y actividades por fecha o categoría. Descubre también lugares gratuitos para recorrer la ciudad.</p>
+            <a className="hero-cta" href="#eventos">Ver eventos gratis <ArrowUpRight size={16} aria-hidden="true" /></a>
           </div>
           <div className="hero-note"><Sparkles size={17} /><span>Actualizado<br /><strong>{formatUpdatedAt(latestUpdatedAt)}</strong></span></div>
           <div className="hero-stamp">LIM<br /><span>{String(currentYear).slice(-2)}</span></div>
         </section>
 
         <section className="explorer" id="eventos">
-          <div className="section-heading"><div><span className="section-kicker">Agenda pública</span><h2>Encuentra tu próximo plan</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
-           <div className="search-row"><div className="search-box"><Search size={19} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por nombre, lugar o tema..." aria-label="Buscar eventos" />{query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} aria-hidden="true" /></button>}</div><button className="filter-toggle" aria-expanded={mobileFilters} aria-controls="filtros-eventos" onClick={() => setMobileFilters(!mobileFilters)}><SlidersHorizontal size={17} aria-hidden="true" /> Filtros</button></div>
+          <div className="section-heading"><div><span className="section-kicker">Agenda gratuita</span><h2>Encuentra tu próximo plan</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
+           <div className="search-row"><div className="search-box"><Search size={19} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por nombre, lugar o tema..." aria-label="Buscar eventos" />{query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} aria-hidden="true" /></button>}</div><button className="filter-toggle" aria-expanded={mobileFilters} aria-controls="filtros-eventos" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? <X size={17} aria-hidden="true" /> : <SlidersHorizontal size={17} aria-hidden="true" />} {mobileFilters ? 'Ocultar filtros' : 'Filtros'}</button></div>
            <div className={`filter-bar ${mobileFilters ? 'is-open' : ''}`} id="filtros-eventos">
              <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)}><ChevronRight size={17} /></button></div>
             <label className="select-filter"><span>Categoría</span><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
@@ -157,15 +159,15 @@ function App() {
           </div>
         </section>
 
-        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando la agenda...</h3><p>Estamos buscando los próximos eventos gratuitos.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Reintentar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>No encontramos planes para estos filtros.</h3><p>Prueba con otro mes, categoría o término de búsqueda.</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setQuery('') }}>Limpiar filtros</button></div>}</section>
+        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>No hay eventos para esta búsqueda.</h3><p>Prueba con otro mes, categoría, modalidad o palabra clave.</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setQuery('') }}>Ver todos los eventos del mes</button></div>}</section>
 
         <section className="places-section" id="lugares">
           <div className="places-heading"><div><span className="section-kicker">Guía local</span><h2>Lugares que visitar en Lima</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
-          <p className="places-intro">Espacios gratuitos para descubrir la ciudad, caminar sin prisa y mirar Lima con otros ojos.</p>
-          {placesLoading ? <div className="empty-state"><MapPin size={30} /><h3>Cargando lugares...</h3><p>Estamos preparando algunas recomendaciones para tu próxima salida.</p></div> : placesError ? <div className="empty-state"><X size={30} /><h3>{placesError}</h3><p>La agenda de eventos sigue disponible.</p></div> : places.length > 0 ? <div className="places-grid">{places.map((place, index) => <PlaceCard key={place.id} place={place} index={index} onOpen={setSelectedPlace} />)}</div> : <div className="empty-state"><MapPin size={30} /><h3>Aún no hay lugares publicados.</h3><p>Pronto tendremos recomendaciones para explorar Lima.</p></div>}
+          <p className="places-intro">Parques, paseos y espacios culturales gratuitos para descubrir Lima a tu ritmo.</p>
+          {placesLoading ? <div className="empty-state"><MapPin size={30} /><h3>Cargando lugares...</h3><p>Preparamos ideas para tu próxima salida.</p></div> : placesError ? <div className="empty-state"><X size={30} /><h3>{placesError}</h3><p>Mientras tanto, puedes explorar los eventos gratuitos.</p></div> : places.length > 0 ? <div className="places-grid">{places.map((place, index) => <PlaceCard key={place.id} place={place} index={index} onOpen={setSelectedPlace} />)}</div> : <div className="empty-state"><MapPin size={30} /><h3>Aún no hay lugares en la guía.</h3><p>Vuelve pronto para descubrir nuevos espacios de Lima.</p></div>}
         </section>
       </main>
-      <footer id="fuentes"><div className="footer-brand"><span className="brand-mark">P</span><strong>plan.lima</strong></div><p>Una guía independiente para encontrar lo que pasa en Lima.</p><span>Hecho con curiosidad · {currentYear}</span></footer>
+      <footer id="fuentes"><div className="footer-brand"><span className="brand-mark">P</span><strong>plan.lima</strong></div><p>Agenda de eventos gratuitos y guía de lugares para disfrutar Lima.</p><span>Hecho con curiosidad · {currentYear}</span></footer>
 
       {selected && <EventModal event={selected} onClose={closeSelected} />}
       {selectedPlace && <PlaceModal place={selectedPlace} onClose={closeSelectedPlace} />}
@@ -188,67 +190,15 @@ function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; 
 }
 
 function EventModal({ event, onClose }: { event: EventItem; onClose: () => void }) {
-  const closeButton = useRef<HTMLButtonElement>(null)
-  const modal = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null
-    closeButton.current?.focus()
-    const handleKeyDown = (keyboardEvent: KeyboardEvent) => {
-      if (keyboardEvent.key === 'Escape') {
-        onClose()
-        return
-      }
-      if (keyboardEvent.key !== 'Tab' || !modal.current) return
-      const focusable = Array.from(modal.current.querySelectorAll<HTMLElement>('button, a[href], [tabindex]:not([tabindex="-1"])'))
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (keyboardEvent.shiftKey && document.activeElement === first) {
-        keyboardEvent.preventDefault()
-        last.focus()
-      } else if (!keyboardEvent.shiftKey && document.activeElement === last) {
-        keyboardEvent.preventDefault()
-        first.focus()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    document.body.style.overflow = 'hidden'
-    return () => { document.removeEventListener('keydown', handleKeyDown); document.body.style.overflow = ''; previousFocus?.focus() }
-  }, [onClose])
+  const { closeButtonRef, dialogRef } = useDialogLifecycle(onClose)
 
-  return <div className="modal-backdrop" onClick={onClose}><div ref={modal} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButton} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p id="event-dialog-description" className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}, Lima</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver información'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
+  return <div className="modal-backdrop" onClick={onClose}><div ref={dialogRef} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p id="event-dialog-description" className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}, Lima</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver detalles en el sitio oficial'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
 }
 
 function PlaceModal({ place, onClose }: { place: PlaceItem; onClose: () => void }) {
-  const closeButton = useRef<HTMLButtonElement>(null)
-  const modal = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null
-    closeButton.current?.focus()
-    const handleKeyDown = (keyboardEvent: KeyboardEvent) => {
-      if (keyboardEvent.key === 'Escape') {
-        onClose()
-        return
-      }
-      if (keyboardEvent.key !== 'Tab' || !modal.current) return
-      const focusable = Array.from(modal.current.querySelectorAll<HTMLElement>('button, a[href], [tabindex]:not([tabindex="-1"])'))
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (keyboardEvent.shiftKey && document.activeElement === first) {
-        keyboardEvent.preventDefault()
-        last.focus()
-      } else if (!keyboardEvent.shiftKey && document.activeElement === last) {
-        keyboardEvent.preventDefault()
-        first.focus()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    document.body.style.overflow = 'hidden'
-    return () => { document.removeEventListener('keydown', handleKeyDown); document.body.style.overflow = ''; previousFocus?.focus() }
-  }, [onClose])
+  const { closeButtonRef, dialogRef } = useDialogLifecycle(onClose)
 
-  return <div className="modal-backdrop" onClick={onClose}><div ref={modal} className="event-modal place-modal" role="dialog" aria-modal="true" aria-labelledby="place-dialog-title" aria-describedby="place-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButton} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={place.image} alt={place.name} onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><div className="modal-body"><h2 id="place-dialog-title">{place.name}</h2><div className="place-location"><span>¿Dónde queda?</span><strong>{place.district}, Lima</strong><strong>{place.address}</strong></div><div className="place-entry"><span>Entrada</span><strong className="green-text">{place.priceType === 'free' ? 'Gratis' : 'De pago'}</strong></div><div className="place-description"><span>¿Por qué visitarlo?</span><p id="place-dialog-description">{place.description}</p></div>{place.hours.trim() && <div className="place-description"><span>Horario</span><p>{place.hours}</p></div>}<div className="modal-actions"><a className="primary-button" href={place.sourceUrl} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> Ver en Google Maps</a>{place.source.trim() && <span className="source-copy">Fuente de referencia: <strong>{place.source}</strong></span>}</div></div></div></div>
+  return <div className="modal-backdrop" onClick={onClose}><div ref={dialogRef} className="event-modal place-modal" role="dialog" aria-modal="true" aria-labelledby="place-dialog-title" aria-describedby="place-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={place.image} alt={place.name} onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><div className="modal-body"><h2 id="place-dialog-title">{place.name}</h2><div className="place-location"><span>¿Dónde queda?</span><strong>{place.district}, Lima</strong><strong>{place.address}</strong></div><div className="place-entry"><span>Entrada</span><strong className="green-text">{place.priceType === 'free' ? 'Gratis' : 'De pago'}</strong></div><div className="place-description"><span>¿Por qué visitarlo?</span><p id="place-dialog-description">{place.description}</p></div>{place.hours.trim() && <div className="place-description"><span>Horario</span><p>{place.hours}</p></div>}<div className="modal-actions"><a className="primary-button" href={place.sourceUrl} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> Ver en Google Maps</a>{place.source.trim() && <span className="source-copy">Fuente de referencia: <strong>{place.source}</strong></span>}</div></div></div></div>
 }
 
 export default App

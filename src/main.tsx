@@ -8,10 +8,10 @@ import './styles.css'
 
 const siteUrl = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '')
 if (siteUrl) {
-  const canonical = document.createElement('link')
+  const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]') ?? document.createElement('link')
   canonical.rel = 'canonical'
   canonical.href = `${siteUrl}/`
-  document.head.appendChild(canonical)
+  if (!canonical.isConnected) document.head.appendChild(canonical)
 
   const ogUrl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]')
   if (ogUrl) ogUrl.content = `${siteUrl}/`

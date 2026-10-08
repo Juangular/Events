@@ -1,13 +1,28 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const siteUrl = process.env.VITE_SITE_URL?.replace(/\/$/, '')
+function normalizeSiteUrl(value) {
+  if (!value) return undefined
+
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || url.pathname !== '/' || url.search || url.hash) return undefined
+    return url.origin
+  } catch {
+    return undefined
+  }
+}
+
+const configuredSiteUrl = process.env.VITE_SITE_URL?.trim()
+const siteUrl = normalizeSiteUrl(configuredSiteUrl)
 const publicDir = resolve('public')
 
 await mkdir(publicDir, { recursive: true })
 
 if (!siteUrl) {
-  console.warn('VITE_SITE_URL no está configurado: no se generará sitemap.xml.')
+  console.warn(configuredSiteUrl
+    ? 'VITE_SITE_URL debe ser un origen HTTPS válido: no se generará sitemap.xml.'
+    : 'VITE_SITE_URL no está configurado: no se generará sitemap.xml.')
   await unlink(resolve(publicDir, 'sitemap.xml')).catch(() => {})
   await writeFile(resolve(publicDir, 'robots.txt'), 'User-agent: *\nAllow: /\n')
 } else {
