@@ -15,9 +15,10 @@ import {
   type PublishMode,
 } from './db'
 import { eventbriteSource } from './sources/eventbrite'
+import { gobpeAgendaSource } from './sources/gobpe-agenda'
 import { lumSource } from './sources/lum'
 
-const ALL_SOURCES: SourceAdapter[] = [eventbriteSource, lumSource]
+const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, eventbriteSource, lumSource]
 
 function emptyCounters(): RunCounters {
   return { fetched: 0, insertable: 0, published: 0, drafted: 0, skippedDupes: 0, rejected: 0, errors: [] }

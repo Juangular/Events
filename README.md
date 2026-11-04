@@ -64,8 +64,11 @@ El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuit
 
 Fuentes actuales:
 
-- **Eventbrite Lima** (`free--events`): datos estructurados JSON-LD; se acepta solo lo que la fuente marca con precio 0.
+- **Agenda Cultural del Ministerio de Cultura** (`gob.pe`): se descarga el PDF semanal más reciente y se extraen únicamente actividades explícitamente gratuitas, con dirección en Lima o modalidad virtual. Se descartan actividades con costo, con boleto pago, de Callao y de otras regiones.
+- **Eventbrite Lima** (`free--events`): datos estructurados JSON-LD; se acepta solo lo que la fuente marca con precio 0. Es una fuente de mejor esfuerzo: AWS WAF puede bloquear las IPs de GitHub Actions. El pipeline reintenta con Chromium/Playwright y, si no logra pasar el desafío, registra el error sin detener las demás fuentes.
 - **Lugar de la Memoria (LUM)**: agenda mensual de actividades con ingreso libre y gratuito.
+
+El workflow instala Chromium para el fallback anti-bot. Las fuentes oficiales no lo necesitan y continúan funcionando aunque Eventbrite no esté disponible.
 
 Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar). Los registros automáticos llevan `origin = 'auto'` y `source_key`; el flujo público no cambia: RLS sigue mostrando solo eventos publicados, gratuitos, vigentes y de Lima.
 

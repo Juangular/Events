@@ -26,6 +26,7 @@ const LIMA_DISTRICTS = new Set(
     'Pachacámac',
     'Pucusana',
     'Puente Piedra',
+    'Pueblo Libre',
     'Punta Hermosa',
     'Punta Negra',
     'Rímac',
