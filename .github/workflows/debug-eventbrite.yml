@@ -19,16 +19,21 @@ jobs:
         run: |
           node --input-type=module <<'EOF'
           import { chromium } from 'playwright';
-          const browser = await chromium.launch({ headless: true });
+          const browser = await chromium.launch({ headless: true, args: ['--disable-blink-features=AutomationControlled'] });
           const page = await browser.newPage();
           await page.goto('https://www.eventbrite.com/d/peru--lima/free--events/', { waitUntil: 'domcontentloaded', timeout: 45000 });
-          await page.waitForTimeout(8000);
-          const title = await page.title();
-          const html = await page.content();
-          console.log('title:', title);
-          console.log('ld+json blocks:', (html.match(/application\/ld\+json/g) || []).length);
-          console.log('event links:', (html.match(/eventbrite\.com(\.pe)?\/e\//g) || []).length);
-          console.log('data-event-id:', (html.match(/data-event-id/g) || []).length);
-          console.log('challenge markers:', (html.match(/Human Verification|gokuProps|awsWaf/g) || []).length);
+          for (const wait of [5000, 10000, 15000]) {
+            await page.waitForTimeout(wait);
+            const title = await page.title();
+            const html = await page.content();
+            console.log(`after +${wait}ms -> title: ${title} | ld+json: ${(html.match(/application\/ld\+json/g) || []).length} | events: ${(html.match(/eventbrite\.com(\.pe)?\/e\//g) || []).length} | challenge: ${(html.match(/Human Verification|gokuProps|awsWaf/g) || []).length}`);
+            if (!title.includes('Human Verification')) break;
+          }
           await browser.close();
           EOF
+      - name: Probe official sources
+        run: |
+          for url in "https://www.gob.pe/es/institucion/cultura/colecciones/44-agenda-cultural" "https://visita-lima.limaciudaddelosreyes.com.pe/es/eventos" "https://www.miraflores.gob.pe" "https://lum.cultura.pe/actividades"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 -A "Mozilla/5.0" "$url")
+            echo "$code $url"
+          done
