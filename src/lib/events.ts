@@ -1,9 +1,8 @@
 import { supabase } from './supabase'
 import { events as fallbackEvents } from '../data'
 import type { EventItem, EventRow } from '../types'
+import { getEventImage } from './event-images'
 import { isValidDateKey, isValidHttpsUrl, isValidImageUrl, isValidTimestamp } from './validation'
-
-const fallbackImage = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=85'
 const categories = new Set(['Cultura', 'Música', 'Deportes', 'Educación', 'Tecnología', 'Gastronomía', 'Familiar', 'Otros'])
 const modalities = new Set(['Presencial', 'Virtual'])
 const prices = new Set(['free', 'paid'])
@@ -42,7 +41,7 @@ function mapRow(row: EventRow): EventItem {
     description: row.description,
     category: row.category,
     modality: row.modality,
-    image: row.image_url || fallbackImage,
+    image: getEventImage(row.category, row.image_url),
     startDate: row.start_date,
     endDate: row.end_date || undefined,
     time: row.time,

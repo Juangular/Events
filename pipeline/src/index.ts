@@ -14,11 +14,14 @@ import {
   type EventInsert,
   type PublishMode,
 } from './db'
+import { barrancoSource } from './sources/barranco'
 import { eventbriteSource } from './sources/eventbrite'
 import { gobpeAgendaSource } from './sources/gobpe-agenda'
+import { ipdAcademiaSource } from './sources/ipd-academia'
 import { lumSource } from './sources/lum'
+import { sanIsidroSource } from './sources/san-isidro'
 
-const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, eventbriteSource, lumSource]
+const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, ipdAcademiaSource, sanIsidroSource, barrancoSource, eventbriteSource, lumSource]
 
 function emptyCounters(): RunCounters {
   return { fetched: 0, insertable: 0, published: 0, drafted: 0, skippedDupes: 0, rejected: 0, errors: [] }
