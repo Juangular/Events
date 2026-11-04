@@ -5,9 +5,15 @@ import { classifyCategory, EVENTBRITE_CATEGORY_MAP } from '../core/category'
 import { districtAlias, looksPaid } from '../core/gates'
 import { dateFromIso, firstSentence, isValidHttpsUrl, timeRangeFromIso } from '../core/text'
 
-const SEARCH_PAGES = [
-  'https://www.eventbrite.com/d/peru--lima/free--events/',
-  'https://www.eventbrite.com/d/peru--lima/free--events/?page=2',
+const SEARCH_PAGE_SETS: string[][] = [
+  [
+    'https://www.eventbrite.com/d/peru--lima/free--events/',
+    'https://www.eventbrite.com/d/peru--lima/free--events/?page=2',
+  ],
+  [
+    'https://www.eventbrite.com.pe/d/peru--lima/free--events/',
+    'https://www.eventbrite.com.pe/d/peru--lima/free--events/?page=2',
+  ],
 ]
 
 interface JsonLdEvent {
@@ -125,17 +131,30 @@ export const eventbriteSource: SourceAdapter = {
 
   async collect(): Promise<CandidateEvent[]> {
     const stubs = new Map<string, { event: JsonLdEvent; card?: CardMeta }>()
+    let lastError: unknown
 
-    for (const pageUrl of SEARCH_PAGES) {
-      const html = await fetchHtml(pageUrl)
-      const { events, cards } = parseSearchPage(html)
-      for (const event of events) {
-        const url = normalizeEventUrl(event.url)
-        if (!url) continue
-        if (!stubs.has(url)) stubs.set(url, { event, card: cards.get(url) })
+    for (const pages of SEARCH_PAGE_SETS) {
+      try {
+        for (const pageUrl of pages) {
+          const html = await fetchHtml(pageUrl)
+          const { events, cards } = parseSearchPage(html)
+          for (const event of events) {
+            const url = normalizeEventUrl(event.url)
+            if (!url) continue
+            if (!stubs.has(url)) stubs.set(url, { event, card: cards.get(url) })
+          }
+          await sleep(500)
+        }
+        if (stubs.size > 0) break
+      } catch (error) {
+        lastError = error
+        console.warn(
+          `[eventbrite] Búsqueda no disponible en ${pages[0]}:`,
+          error instanceof Error ? error.message : error,
+        )
       }
-      await sleep(500)
     }
+    if (stubs.size === 0 && lastError) throw lastError
 
     const candidates: CandidateEvent[] = []
     for (const [url, stub] of stubs) {
