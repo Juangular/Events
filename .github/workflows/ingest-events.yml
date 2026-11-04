@@ -3,7 +3,12 @@ name: Ingest eventos gratuitos Lima
 on:
   schedule:
     - cron: '0 11,23 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Solo probe WAF (sin escribir en Supabase)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,10 +36,29 @@ jobs:
       - name: Install Chromium (fallback anti-bot)
         run: npx playwright install --with-deps chromium
 
+      - name: Probe WAF (debug)
+        if: inputs.debug == true
+        run: |
+          node --input-type=module <<'EOF'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch({ headless: true, args: ['--disable-blink-features=AutomationControlled'] });
+          const page = await browser.newPage();
+          await page.goto('https://www.eventbrite.com/d/peru--lima/free--events/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+          for (let i = 1; i <= 12; i++) {
+            await page.waitForTimeout(5000);
+            const title = await page.title();
+            const html = await page.content();
+            console.log(`t+${i * 5}s title=${title} ld=${(html.match(/application\/ld\+json/g) || []).length} events=${(html.match(/eventbrite\.com(\.pe)?\/e\//g) || []).length}`);
+            if (!/human verification/i.test(title)) break;
+          }
+          await browser.close();
+          EOF
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Ingest
+        if: inputs.debug != true
         run: npm run ingest
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
