@@ -58,6 +58,43 @@ Los enlaces `source_url` y `registration_url` deben usar `https://`. Si `require
 
 La gestión mínima del contenido se realiza en el dashboard de Supabase. No existe un panel administrativo público y no debe exponerse uno sin autenticación.
 
+## Ingesta automática de eventos
+
+El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuitos de Lima desde fuentes públicas y los escribe en `events`. Se ejecuta automáticamente con GitHub Actions (`.github/workflows/ingest-events.yml`) dos veces al día (06:00 y 18:00 America/Lima) y también puede correrse a mano desde la pestaña *Actions* con *Run workflow*.
+
+Fuentes actuales:
+
+- **Eventbrite Lima** (`free--events`): datos estructurados JSON-LD; se acepta solo lo que la fuente marca con precio 0.
+- **Lugar de la Memoria (LUM)**: agenda mensual de actividades con ingreso libre y gratuito.
+
+Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar). Los registros automáticos llevan `origin = 'auto'` y `source_key`; el flujo público no cambia: RLS sigue mostrando solo eventos publicados, gratuitos, vigentes y de Lima.
+
+### Modo de publicación
+
+La fila `publish_mode` de la tabla `automation_settings` controla el flujo:
+
+- `auto`: los candidatos que pasan todos los filtros se publican directamente (`status = 'published'`); los que fallan un filtro suave quedan como `draft` para inspección.
+- `review`: todo entra como `draft` y se aprueba manualmente desde `Supabase > Table Editor > events` (cambiar `status` a `published`).
+
+Se cambia editando esa fila en Supabase; el pipeline la lee en cada corrida. La variable `PUBLISH_MODE` (`auto` o `review`) en el workflow la sobreescribe temporalmente.
+
+### Configurar la automatización
+
+1. Ejecutar `supabase/schema.sql` (añade columnas de automatización, `automation_settings` y `sync_runs`).
+2. En GitHub del repositorio: *Settings > Secrets and variables > Actions*.
+3. Crear los secrets `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (la clave `service_role` solo vive aquí; nunca en Vercel, el repositorio ni `.env.local`).
+4. Opcional: crear la variable `PUBLISH_MODE` para forzar un modo sin tocar la base de datos.
+
+Cada corrida deja un registro en `sync_runs` (obtenidos, publicados, borradores, duplicados, descartados y errores) para verificar la salud del pipeline. Para probar sin escribir nada:
+
+```bash
+cd pipeline
+npm install
+npm run ingest:dry
+```
+
+Agregar una fuente nueva consiste en crear un adaptador en `pipeline/src/sources/` con la interfaz `SourceAdapter` y registrarlo en `pipeline/src/index.ts`. Si un sitio cambia de diseño, el adaptador falla de forma aislada: el error queda en `sync_runs` y las demás fuentes siguen funcionando.
+
 ## Cargar lugares recomendados
 
 La tabla `places` también se crea al ejecutar todo `supabase/schema.sql`. Para publicar un lugar desde `Supabase > Table Editor > places`, usar como mínimo:

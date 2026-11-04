@@ -117,3 +117,64 @@ create trigger places_set_updated_at
 before update on public.places
 for each row
 execute function public.set_updated_at();
+
+-- Automatización de ingesta (pipeline en GitHub Actions).
+-- El pipeline escribe con la service_role; el público nunca escribe.
+
+alter table public.events add column if not exists origin text not null default 'manual' check (origin in ('manual', 'auto'));
+alter table public.events add column if not exists source_key text;
+alter table public.events add column if not exists fingerprint text;
+alter table public.events add column if not exists raw jsonb;
+alter table public.events add column if not exists synced_at timestamptz;
+
+create unique index if not exists events_fingerprint_idx on public.events (fingerprint) where fingerprint is not null;
+
+create table if not exists public.automation_settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.automation_settings enable row level security;
+
+create or replace function public.automation_settings_touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists automation_settings_touch on public.automation_settings;
+
+create trigger automation_settings_touch
+before update on public.automation_settings
+for each row
+execute function public.automation_settings_touch_updated_at();
+
+-- Switch de publicación: 'auto' publica directo lo que pasa todos los
+-- filtros de calidad; 'review' guarda todo como draft para aprobación
+-- manual desde Supabase. Sin políticas públicas: solo service_role.
+insert into public.automation_settings (key, value)
+values ('publish_mode', 'auto')
+on conflict (key) do nothing;
+
+create table if not exists public.sync_runs (
+  id uuid primary key default gen_random_uuid(),
+  source_key text not null,
+  started_at timestamptz not null,
+  finished_at timestamptz,
+  fetched integer not null default 0,
+  inserted integer not null default 0,
+  published integer not null default 0,
+  drafted integer not null default 0,
+  skipped_dupes integer not null default 0,
+  rejected integer not null default 0,
+  errors jsonb not null default '[]'::jsonb
+);
+
+alter table public.sync_runs enable row level security;
+
+create index if not exists sync_runs_recent_idx on public.sync_runs (started_at desc);
