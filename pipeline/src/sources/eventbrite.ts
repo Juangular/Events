@@ -138,6 +138,11 @@ export const eventbriteSource: SourceAdapter = {
         for (const pageUrl of pages) {
           const html = await fetchHtml(pageUrl)
           const { events, cards } = parseSearchPage(html)
+          if (events.length === 0) {
+            console.warn(
+              `[eventbrite] 0 eventos parseados en ${pageUrl} (ld+json: ${(html.match(/application\/ld\+json/g) || []).length}, tamaño: ${html.length})`,
+            )
+          }
           for (const event of events) {
             const url = normalizeEventUrl(event.url)
             if (!url) continue

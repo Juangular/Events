@@ -36,6 +36,8 @@ export async function fetchHtmlViaBrowser(url: string): Promise<string> {
       if (!/human verification/i.test(title)) break
       await sleep(2_000)
     }
+    await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => {})
+    await sleep(3_000)
     return await page.content()
   } finally {
     await page.close()
