@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CandidateEvent, RunCounters, SourceAdapter } from './types'
+import { closeBrowser } from './core/browser'
 import { runGates } from './core/gates'
 import { fingerprint } from './core/text'
 import {
@@ -143,7 +144,11 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
-  console.error('Fallo general del pipeline:', error)
-  process.exitCode = 1
-})
+main()
+  .catch((error) => {
+    console.error('Fallo general del pipeline:', error)
+    process.exitCode = 1
+  })
+  .finally(async () => {
+    await closeBrowser()
+  })

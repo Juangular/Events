@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
-    "cheerio": "1.1.2"
+    "cheerio": "1.1.2",
+    "playwright": "1.49.1"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
