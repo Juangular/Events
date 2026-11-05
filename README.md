@@ -107,6 +107,22 @@ npm run ingest:dry
 
 Agregar una fuente nueva consiste en crear un adaptador en `pipeline/src/sources/` con la interfaz `SourceAdapter` y registrarlo en `pipeline/src/index.ts`. Si un sitio cambia de diseño, el adaptador falla de forma aislada: el error queda en `sync_runs` y las demás fuentes siguen funcionando.
 
+La interfaz permite alternar entre **Disponibles** y **Pasados** junto al selector de mes: en *Disponibles* se ven los eventos vigentes del mes elegido; en *Pasados*, los eventos ya finalizados de ese mes (por ejemplo, seleccionar octubre y ver la agenda pasada de octubre). Para ello, la lectura pública de `events` incluye eventos de cualquier fecha: aplica este cambio una sola vez en `Supabase > SQL Editor` (el resto de `supabase/schema.sql` es idempotente):
+
+```sql
+drop policy if exists "Public can read current free events" on public.events;
+drop policy if exists "Public can read free Lima events" on public.events;
+
+create policy "Public can read free Lima events"
+on public.events for select
+to anon, authenticated
+using (
+  status = 'published'
+  and price_type = 'free'
+  and department = 'Lima'
+);
+```
+
 ## Cargar lugares recomendados
 
 La tabla `places` también se crea al ejecutar todo `supabase/schema.sql`. Para publicar un lugar desde `Supabase > Table Editor > places`, usar como mínimo:

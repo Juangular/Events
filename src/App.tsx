@@ -57,6 +57,7 @@ function App() {
   const [placesError, setPlacesError] = useState<string | null>(null)
   const [category, setCategory] = useState<(typeof categories)[number]>('Todas')
   const [modality, setModality] = useState('Todas')
+  const [scope, setScope] = useState<'disponibles' | 'pasados'>('disponibles')
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selected, setSelected] = useState<EventItem | null>(null)
@@ -109,13 +110,14 @@ function App() {
 
   const filtered = useMemo(() => events.filter((event) => {
     const matchesMonth = overlapsMonth(event, month, year)
-    const matchesCurrent = (event.endDate ?? event.startDate) >= getLocalDateKey()
+    const eventEnd = event.endDate ?? event.startDate
+    const matchesScope = scope === 'pasados' ? eventEnd < getLocalDateKey() : eventEnd >= getLocalDateKey()
     const matchesCategory = category === 'Todas' || event.category === category
     const matchesModality = modality === 'Todas' || event.modality === modality
     const search = debouncedQuery.toLowerCase()
     const matchesQuery = !search || `${event.title} ${event.description} ${event.place} ${event.category}`.toLowerCase().includes(search)
-    return matchesMonth && matchesCurrent && matchesCategory && matchesModality && matchesQuery
-  }).sort((a, b) => a.startDate.localeCompare(b.startDate)), [events, month, year, category, modality, debouncedQuery])
+    return matchesMonth && matchesScope && matchesCategory && matchesModality && matchesQuery
+  }).sort((a, b) => a.startDate.localeCompare(b.startDate)), [events, month, year, scope, category, modality, debouncedQuery])
 
   const shiftMonth = (direction: number) => {
     const next = new Date(year, month + direction, 1)
@@ -153,14 +155,15 @@ function App() {
           <div className="section-heading"><div><span className="section-kicker">Agenda gratuita</span><h2>Encuentra tu próximo plan</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
            <div className="search-row"><div className="search-box"><Search size={19} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por nombre, lugar o tema..." aria-label="Buscar eventos" />{query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} aria-hidden="true" /></button>}</div><button className="filter-toggle" aria-expanded={mobileFilters} aria-controls="filtros-eventos" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? <X size={17} aria-hidden="true" /> : <SlidersHorizontal size={17} aria-hidden="true" />} {mobileFilters ? 'Ocultar filtros' : 'Filtros'}</button></div>
            <div className={`filter-bar ${mobileFilters ? 'is-open' : ''}`} id="filtros-eventos">
-             <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)}><ChevronRight size={17} /></button></div>
+              <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)}><ChevronRight size={17} /></button></div>
+            <div className="mode-toggle" role="group" aria-label="Tipo de eventos"><button type="button" aria-pressed={scope === 'disponibles'} onClick={() => setScope('disponibles')}>Disponibles</button><button type="button" aria-pressed={scope === 'pasados'} onClick={() => setScope('pasados')}>Pasados</button></div>
             <label className="select-filter"><span>Categoría</span><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
             <label className="select-filter"><span>Modalidad</span><select value={modality} onChange={(event) => setModality(event.target.value)}><option>Todas</option><option>Presencial</option><option>Virtual</option></select></label>
             <span className="free-pill">● Todo gratis</span>
           </div>
         </section>
 
-        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>No hay eventos para esta búsqueda.</h3><p>Prueba con otro mes, categoría, modalidad o palabra clave.</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setQuery('') }}>Ver todos los eventos del mes</button></div>}</section>
+        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>{scope === 'pasados' ? 'No hay eventos pasados en este mes.' : 'No hay eventos para esta búsqueda.'}</h3><p>{scope === 'pasados' ? 'Prueba con otro mes o vuelve a eventos disponibles.' : 'Prueba con otro mes, categoría, modalidad o palabra clave.'}</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setQuery('') }}>Ver todos los eventos del mes</button></div>}</section>
 
         <section className="places-section" id="lugares">
           <div className="places-heading"><div><span className="section-kicker">Guía local</span><h2>Lugares que visitar en Lima</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>

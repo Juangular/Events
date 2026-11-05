@@ -142,3 +142,13 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
   .filter-toggle { padding: 10px 14px; }
   .month-filter { gap: 8px; }
 }
+
+.mode-toggle { display: flex; border: 1px solid rgba(255,255,255,.25); min-height: 62px; overflow: hidden; }
+.mode-toggle button { background: transparent; border: 0; color: #b7c8b9; font: 500 11px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .5px; padding: 0 18px; cursor: pointer; transition: background .2s, color .2s; }
+.mode-toggle button + button { border-left: 1px solid rgba(255,255,255,.25); }
+.mode-toggle button[aria-pressed="true"] { background: #f7f4ed; color: var(--ink); }
+.mode-toggle button:hover { color: #fff; }
+
+@media (max-width: 760px) {
+  .mode-toggle { min-width: 100%; }
+}

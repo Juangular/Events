@@ -37,15 +37,17 @@ alter table public.events add constraint registration_url_required check (not re
 alter table public.events enable row level security;
 
 drop policy if exists "Public can read current free events" on public.events;
+drop policy if exists "Public can read free Lima events" on public.events;
 
-create policy "Public can read current free events"
+-- Lectura pública de eventos gratuitos de Lima publicados, con cualquier fecha.
+-- El sitio separa en la interfaz entre eventos disponibles y eventos pasados.
+create policy "Public can read free Lima events"
 on public.events for select
 to anon, authenticated
 using (
   status = 'published'
   and price_type = 'free'
   and department = 'Lima'
-  and coalesce(end_date, start_date) >= (now() at time zone 'America/Lima')::date
 );
 
 create index if not exists events_public_dates_idx on public.events (department, status, price_type, start_date, end_date);
