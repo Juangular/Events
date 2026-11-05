@@ -136,7 +136,7 @@ export const eventbriteSource: SourceAdapter = {
     for (const pages of SEARCH_PAGE_SETS) {
       try {
         for (const pageUrl of pages) {
-          const html = await fetchHtml(pageUrl)
+          const html = await fetchHtml(pageUrl, { browserFallback: true })
           const { events, cards } = parseSearchPage(html)
           if (events.length === 0) {
             console.warn(
@@ -166,7 +166,7 @@ export const eventbriteSource: SourceAdapter = {
       await sleep(500)
       let detail: JsonLdEvent = stub.event
       try {
-        const detailEvents = parseJsonLdEvents(await fetchHtml(url))
+        const detailEvents = parseJsonLdEvents(await fetchHtml(url, { browserFallback: true }))
         detail = detailEvents.find((event) => normalizeEventUrl(event.url) === url) ?? detailEvents[0] ?? stub.event
       } catch (error) {
         console.warn(`[eventbrite] Detalle no disponible para ${url}:`, error instanceof Error ? error.message : error)

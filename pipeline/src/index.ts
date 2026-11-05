@@ -19,9 +19,10 @@ import { eventbriteSource } from './sources/eventbrite'
 import { gobpeAgendaSource } from './sources/gobpe-agenda'
 import { ipdAcademiaSource } from './sources/ipd-academia'
 import { lumSource } from './sources/lum'
+import { municipalSources } from './sources/gobpe-municipal'
 import { sanIsidroSource } from './sources/san-isidro'
 
-const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, ipdAcademiaSource, sanIsidroSource, barrancoSource, eventbriteSource, lumSource]
+const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, ipdAcademiaSource, sanIsidroSource, barrancoSource, ...municipalSources, eventbriteSource, lumSource]
 
 function emptyCounters(): RunCounters {
   return { fetched: 0, insertable: 0, published: 0, drafted: 0, skippedDupes: 0, rejected: 0, errors: [] }
@@ -51,7 +52,7 @@ async function runSource(
         continue
       }
 
-      const status = publishMode === 'auto' && gates.demote.length === 0 ? 'published' : 'draft'
+      const status = publishMode === 'auto' && gates.demote.length === 0 && !candidate.needsReview ? 'published' : 'draft'
       const row = toEventInsert(candidate, adapter.key, status)
       if (known.has(row.fingerprint)) {
         counters.skippedDupes += 1

@@ -59,7 +59,7 @@ const NOT_LIMA = new Set(['callao', 'constitutional del callao', 'provincia cons
 const PAID_PATTERN = /\bs\/\.\s*\d|\bs\/\s*\d|US\$\s*\d|\$\s*\d|precio\s*:?\s*\d|desde\s+s\/|entrada\s*:?\s*s\//
 
 const FREE_PATTERN =
-  /entrada\s+libre|ingreso\s+libre|gratuit|gratis|acceso\s+libre|sin\s+costo|libre\s+y\s+gratuito|\bfree\b|a\s+precio\s+de\s+0/
+  /entrada\s+(?:es\s+)?libre|ingreso\s+(?:es\s+)?libre|gratuit|gratis|acceso\s+(?:es\s+)?libre|sin\s+costo|libre\s+y\s+gratuito|\bfree\b|a\s+precio\s+de\s+0/
 
 export function isLimaDistrict(value: string): 'ok' | 'alias' | 'outside' | 'unknown' {
   const key = normalizeText(value)

@@ -48,13 +48,14 @@ async function fetchDirect(url: string, attempts = 2): Promise<string> {
   throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
-export async function fetchHtml(url: string): Promise<string> {
+export async function fetchHtml(url: string, options: { browserFallback?: boolean } = {}): Promise<string> {
   const host = new URL(url).hostname
-  if (browserHosts.has(host)) return fetchHtmlViaBrowser(url)
+  if (options.browserFallback && browserHosts.has(host)) return fetchHtmlViaBrowser(url)
 
   try {
     return await fetchDirect(url)
   } catch (directError) {
+    if (!options.browserFallback) throw directError
     try {
       const html = await fetchHtmlViaBrowser(url)
       browserHosts.add(host)

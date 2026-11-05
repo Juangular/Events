@@ -60,7 +60,7 @@ La gestión mínima del contenido se realiza en el dashboard de Supabase. No exi
 
 ## Ingesta automática de eventos
 
-El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuitos de Lima desde fuentes públicas y los escribe en `events`. Se ejecuta automáticamente con GitHub Actions (`.github/workflows/ingest-events.yml`) dos veces al día (06:00 y 18:00 America/Lima) y también puede correrse a mano desde la pestaña *Actions* con *Run workflow*.
+El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuitos de Lima desde fuentes públicas y los escribe en `events`. Se ejecuta automáticamente con GitHub Actions (`.github/workflows/ingest-events.yml`) una vez al día a las 06:00 America/Lima y también puede correrse a mano desde la pestaña *Actions* con *Run workflow*. Cada ejecución consulta todas las fuentes: inserta únicamente eventos nuevos y omite duplicados; si no hay novedades, no cambia nada.
 
 Fuentes actuales:
 
@@ -69,6 +69,10 @@ Fuentes actuales:
 - **Academia IPD**: descubre la temporada vigente y consulta los horarios oficiales por disciplina y complejo. Genera una tarjeta semanal por disciplina/sede con edades y horarios exactos; descarta horarios inválidos y regiones fuera de Lima. Requiere preinscripción en línea.
 - **Municipalidad de San Isidro**: campañas con fecha, lugar, horario, gratuidad explícita e imagen oficial. Se descartan avisos administrativos, actividades con costo y eventos finalizados.
 - **Municipalidad de Barranco**: actividades recurrentes publicadas recientemente, con gratuidad, horario y lugar verificables. Solo se proyectan dentro de la semana actual y se revalidan en cada corrida.
+- **Municipalidad Metropolitana de Lima**: noticias oficiales con fecha, hora, lugar y gratuidad explícita.
+- **Santiago de Surco**: eventos oficiales con gratuidad verificable. Si la fuente no publica fecha de inicio u horario, el registro queda como `draft` para revisión en lugar de inventar datos.
+- **San Miguel y Pueblo Libre**: se consultan campañas y noticias oficiales; solo se incorporan cuando contienen datos completos y vigentes. Actualmente no hay eventos futuros que cumplan ese requisito.
+- **Miraflores**: no está activo como fuente propia porque la agenda oficial revisada está vacía o desactualizada y no existe otra fuente municipal vigente con datos estructurados suficientes. Los eventos de Miraflores pueden seguir llegando por LUM, MinCultura y Eventbrite.
 - **Lugar de la Memoria (LUM)**: agenda mensual de actividades con ingreso libre y gratuito.
 
 El workflow instala Chromium para el fallback anti-bot. Las fuentes oficiales no lo necesitan y continúan funcionando aunque Eventbrite no esté disponible.

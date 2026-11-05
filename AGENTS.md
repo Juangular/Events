@@ -34,11 +34,11 @@
 - Keep event data aligned with the schema constraints and the frontend validation in `src/lib/events.ts`; published records must be genuinely free, current, Lima events with an official working source URL.
 - Verify RLS and real event loading in an incognito window before deployment.
 - Automated rows use `origin = 'auto'`, `source_key`, and a unique `fingerprint`; do not edit those columns manually unless fixing bad data, and never change `origin` on hand-entered events.
-- The ingestion switch lives in `automation_settings` (`publish_mode = 'auto' | 'review'`): `auto` publishes candidates that pass every quality gate; `review` stores everything as `draft` for manual approval in the Supabase dashboard. `sync_runs` records each run's counts and errors.
+- The ingestion switch lives in `automation_settings` (`publish_mode = 'auto' | 'review'`): `auto` publishes candidates that pass every quality gate; `review` stores everything as `draft` for manual approval in the Supabase dashboard. Candidates with `needsReview = true` (for example, a source that omits the event start date or schedule) stay `draft` even in `auto` mode instead of inventing missing data. `sync_runs` records each run's counts and errors.
 - Source adapters live in `pipeline/src/sources/`; one file per source. Quality gates (free, Lima, dates, URLs) live in `pipeline/src/core/gates.ts` and must stay strict.
 
 ## Deployment
 
 - Vercel uses `npm run build` and `dist` as the output directory; configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_SITE_URL` for the deployment environment.
 - Do not add a public write path, authentication, or an admin dashboard without an explicit product requirement and an accompanying security design.
-- `.github/workflows/ingest-events.yml` runs the pipeline on a cron (06:00 and 18:00 America/Lima) using GitHub secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. The pipeline is the only automated writer and must stay server-side; do not add ingestion endpoints to the frontend.
+- `.github/workflows/ingest-events.yml` runs the pipeline on a cron (daily at 06:00 America/Lima) using GitHub secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Every run queries every source, inserts only new fingerprints and changes nothing when no new events are found. The pipeline is the only automated writer and must stay server-side; do not add ingestion endpoints to the frontend.
