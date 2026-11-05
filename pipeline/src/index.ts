@@ -19,10 +19,15 @@ import { eventbriteSource } from './sources/eventbrite'
 import { gobpeAgendaSource } from './sources/gobpe-agenda'
 import { ipdAcademiaSource } from './sources/ipd-academia'
 import { lumSource } from './sources/lum'
+import { mirafloresSource } from './sources/miraflores'
 import { municipalSources } from './sources/gobpe-municipal'
 import { sanIsidroSource } from './sources/san-isidro'
 
-const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, ipdAcademiaSource, sanIsidroSource, barrancoSource, ...municipalSources, eventbriteSource, lumSource]
+const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, ipdAcademiaSource, sanIsidroSource, barrancoSource, mirafloresSource, ...municipalSources, eventbriteSource, lumSource]
+
+// Fuentes con caída permanente conocida: sus errores se reportan como
+// "degradada" sin fallar el workflow (evita avisos diarios repetidos).
+const KNOWN_OUTAGE_SOURCES = new Set(['eventbrite'])
 
 function emptyCounters(): RunCounters {
   return { fetched: 0, insertable: 0, published: 0, drafted: 0, skippedDupes: 0, rejected: 0, errors: [] }
@@ -126,11 +131,11 @@ async function main(): Promise<void> {
 
   const known = client ? await existingFingerprints(client) : new Set<string>()
   const totals = emptyCounters()
-  let failedSources = 0
+  const results: Array<{ source: SourceAdapter; counters: RunCounters }> = []
 
   for (const adapter of sources) {
     const counters = await runSource(adapter, publishMode, known, client, dryRun)
-    if (counters.errors.length > 0 && counters.fetched === 0) failedSources += 1
+    results.push({ source: adapter, counters })
     totals.fetched += counters.fetched
     totals.published += counters.published
     totals.drafted += counters.drafted
@@ -143,8 +148,43 @@ async function main(): Promise<void> {
     `\nResumen: obtenidos=${totals.fetched} publicados=${totals.published} borradores=${totals.drafted} duplicados=${totals.skippedDupes} descartados=${totals.rejected} errores=${totals.errors.length}`,
   )
 
-  if (failedSources === sources.length) {
-    console.error('Todas las fuentes fallaron.')
+  const unexpected = results.filter((result) => result.counters.errors.length > 0 && !KNOWN_OUTAGE_SOURCES.has(result.source.key))
+  const degraded = results.filter((result) => result.counters.errors.length > 0 && KNOWN_OUTAGE_SOURCES.has(result.source.key))
+
+  const summaryLines = [
+    `## Ingesta de eventos — ${new Date().toISOString()}`,
+    '',
+    `| Fuente | Obtenidos | Publicados | Borradores | Duplicados | Descartados | Errores |`,
+    `| --- | ---: | ---: | ---: | ---: | ---: | ---: |`,
+    ...results.map(({ source, counters }) =>
+      `| ${source.key} | ${counters.fetched} | ${counters.published} | ${counters.drafted} | ${counters.skippedDupes} | ${counters.rejected} | ${counters.errors.length} |`),
+    '',
+  ]
+  if (unexpected.length > 0) {
+    summaryLines.push('### Errores que requieren atención', '')
+    for (const { source, counters } of unexpected) {
+      for (const message of counters.errors) summaryLines.push(`- \`${source.key}\`: ${message}`)
+    }
+    summaryLines.push('')
+  }
+  if (degraded.length > 0) {
+    summaryLines.push('### Fuentes degradadas conocidas (sin aviso)', '')
+    for (const { source, counters } of degraded) {
+      for (const message of counters.errors) summaryLines.push(`- \`${source.key}\`: ${message}`)
+    }
+    summaryLines.push('')
+  }
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    try {
+      const { appendFileSync } = await import('node:fs')
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summaryLines.join('\n')}\n`)
+    } catch (error) {
+      console.warn('[report] No se pudo escribir el resumen de GitHub:', error instanceof Error ? error.message : error)
+    }
+  }
+
+  if (unexpected.length > 0) {
+    console.error(`Fuentes con errores inesperados: ${unexpected.map((result) => result.source.key).join(', ')}`)
     process.exitCode = 1
   }
 }

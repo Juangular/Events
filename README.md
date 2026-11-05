@@ -72,7 +72,7 @@ Fuentes actuales:
 - **Municipalidad Metropolitana de Lima**: noticias oficiales con fecha, hora, lugar y gratuidad explícita.
 - **Santiago de Surco**: eventos oficiales con gratuidad verificable. Si la fuente no publica fecha de inicio u horario, el registro queda como `draft` para revisión en lugar de inventar datos.
 - **San Miguel y Pueblo Libre**: se consultan campañas y noticias oficiales; solo se incorporan cuando contienen datos completos y vigentes. Actualmente no hay eventos futuros que cumplan ese requisito.
-- **Miraflores**: no está activo como fuente propia porque la agenda oficial revisada está vacía o desactualizada y no existe otra fuente municipal vigente con datos estructurados suficientes. Los eventos de Miraflores pueden seguir llegando por LUM, MinCultura y Eventbrite.
+- **Miraflores**: la agenda oficial `eventos-municipales` se procesa con los eventos disponibles, incluidos los antiguos, para validar la estructura de parsing (JSON-LD de cada página de evento). Los eventos pasados se descartan por fecha y no se publican; cuando la municipalidad publique eventos nuevos con la misma estructura, entrarán automáticamente. Si la estructura cambiara, la corrida fallaría como error de estructura en lugar de ignorarlo en silencio.
 - **Lugar de la Memoria (LUM)**: agenda mensual de actividades con ingreso libre y gratuito.
 
 El workflow instala Chromium para el fallback anti-bot. Las fuentes oficiales no lo necesitan y continúan funcionando aunque Eventbrite no esté disponible.
@@ -97,7 +97,7 @@ Se cambia editando esa fila en Supabase; el pipeline la lee en cada corrida. La 
 3. Crear los secrets `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (la clave `service_role` solo vive aquí; nunca en Vercel, el repositorio ni `.env.local`).
 4. Opcional: crear la variable `PUBLISH_MODE` para forzar un modo sin tocar la base de datos.
 
-Cada corrida deja un registro en `sync_runs` (obtenidos, publicados, borradores, duplicados, descartados y errores) para verificar la salud del pipeline. Para probar sin escribir nada:
+Cada corrida deja un registro en `sync_runs` (obtenidos, publicados, borradores, duplicados, descartados y errores) para verificar la salud del pipeline. El workflow también escribe un resumen por fuente en la página de la corrida (pestaña *Summary*). **Solo se notifica cuando hay errores** (el workflow queda en rojo y GitHub envía la alerta de workflow fallido); cuando simplemente no hay eventos nuevos, la corrida queda en verde y no avisa. Las caídas permanentes conocidas —actualmente Eventbrite, bloqueado por su WAF— se listan como "degradadas" sin provocar alertas; la lista `KNOWN_OUTAGE_SOURCES` en `pipeline/src/index.ts` controla esa excepción. Para probar sin escribir nada:
 
 ```bash
 cd pipeline
