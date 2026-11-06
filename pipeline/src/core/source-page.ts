@@ -4,7 +4,7 @@ import { classifyCategory } from './category'
 import { findLimaDistrict, isLimaDistrict, looksFree, looksPaid } from './gates'
 import { htmlToText } from './html'
 import { fetchHtml, sleep } from './http'
-import { dateFromIso, firstSentence, isValidHttpsUrl, normalizeText, timeRangeFromIso } from './text'
+import { dateFromIso, firstSentence, isValidHttpsUrl, normalizeText, parseSpanishMonth, timeRangeFromIso, toIsoDate } from './text'
 
 export function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -77,6 +77,30 @@ export function registrationLink(html: string, base: string): string | undefined
   return found
 }
 
+function structuredImage(value: unknown, depth = 0): string | undefined {
+  if (depth > 4) return undefined
+  if (Array.isArray(value)) return value.map((item) => structuredImage(item, depth + 1)).find(Boolean)
+  if (typeof value === 'string') return isValidHttpsUrl(value.trim()) ? value.trim() : undefined
+  if (!value || typeof value !== 'object') return undefined
+  const image = object(value)
+  return structuredImage(image.contentUrl, depth + 1) ?? structuredImage(image.url, depth + 1)
+}
+
+function conflictingDates(description: string, startDate: string, endDate: string): boolean {
+  // Compare only explicitly labelled activity dates, not incidental dates in the prose.
+  const dates = description.matchAll(/\bfecha\s*:\s*(?:(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)[,\s]*)?(\d{1,2})\s+de\s+([a-záéíóú]+)(?:\s+de\s+(\d{4}))?/gi)
+  for (const match of dates) {
+    const month = parseSpanishMonth(match[2]!)
+    if (!month) continue
+    const years = match[3] ? [Number(match[3])] : [...new Set([Number(startDate.slice(0, 4)), Number(endDate.slice(0, 4))])]
+    if (!years.some((year) => {
+      const date = toIsoDate(year, month, Number(match[1]))
+      return date && date >= startDate && date <= endDate
+    })) return true
+  }
+  return false
+}
+
 export function structuredCandidate(event: Record<string, unknown>, options: {
   source: string; url: string; description?: string; priceText?: string; registrationUrl?: string; fallbackCategory?: Category
 }): CandidateEvent | null {
@@ -97,13 +121,13 @@ export function structuredCandidate(event: Record<string, unknown>, options: {
   const address = object(location.address)
   const locality = text(address.addressLocality)
   const region = text(address.addressRegion)
-  const country = text(address.addressCountry)
+  const country = text(address.addressCountry) || text(object(address.addressCountry).name)
   if (country && !/^(pe|peru)$/i.test(normalizeText(country))) return null
-  if (region && !/^lima(?: metropolitana)?$/i.test(region)) return null
+  if (region && !/^(?:lima(?: metropolitana)?|(?:provincia constitucional del )?callao)$/i.test(region)) return null
   const locationText = normalizeText(`${locality} ${text(address.streetAddress)} ${text(location.name)}`)
-  if (/\b(callao|ica|arequipa|huancayo|junin|chiclayo|piura|trujillo|cusco|huaral|chimbote|pucallpa|tacna)\b/.test(locationText)) return null
+  if (/\b(ica|arequipa|huancayo|junin|chiclayo|piura|trujillo|cusco|huaral|chimbote|pucallpa|tacna)\b/.test(locationText)) return null
   if (isLimaDistrict(locality) === 'outside') return null
-  const district = findLimaDistrict(`${locality} ${text(address.streetAddress)} ${text(location.name)}`)
+  const district = findLimaDistrict(locality) ?? findLimaDistrict(`${text(address.streetAddress)} ${text(location.name)}`)
   const requiresRegistration = /previa inscrip|registro previo|para inscribirte|inscripcion obligatoria|requiere inscripcion/.test(normalizeText(description))
   if (requiresRegistration && !options.registrationUrl) return null
   const modality = /OnlineEventAttendanceMode/.test(text(event.eventAttendanceMode)) ? 'Virtual' : 'Presencial'
@@ -115,9 +139,10 @@ export function structuredCandidate(event: Record<string, unknown>, options: {
     modality, startDate, endDate: endDate && endDate !== startDate ? endDate : undefined, time, place, district,
     organizer: text(object(event.organizer).name) || options.source, source: options.source, sourceUrl: options.url,
     requiresRegistration, registrationUrl: options.registrationUrl, tags: [],
-    imageUrl: isValidHttpsUrl(text(event.image)) ? text(event.image) : undefined,
+    imageUrl: structuredImage(event.image),
     freeSignal, priceRaw: options.priceText || (prices.length ? 'Gratis (precio publicado: 0)' : undefined),
-    qualityIssues: [...(time === 'Consultar horario' ? ['time:missing'] : []), ...(modality === 'Presencial' && place === 'Consultar lugar' ? ['place:missing'] : [])],
+    qualityIssues: [...(time === 'Consultar horario' ? ['time:missing'] : []), ...(modality === 'Presencial' && place === 'Consultar lugar' ? ['place:missing'] : []),
+      ...(conflictingDates(description, startDate, endDate ?? startDate) ? ['schedule:conflicting_dates'] : [])],
     raw: { scrapedUrl: options.url, provenance: 'aggregator', startDate: startIso, endDate: endIso, priceText },
   }
 }

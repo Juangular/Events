@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { runGates, findLimaDistrict } from '../core/gates'
+import { publicationDecision } from '../core/publication'
+import { toEventInsert } from '../db'
 import { mallListing, parseMallEvent, weeklyOccurrences } from '../core/mall-events'
 import { eventNodes, mainEvent, sameSiteUrl, structuredCandidate } from '../core/source-page'
 import { isoDateInLima } from '../core/text'
@@ -45,7 +47,7 @@ test('paid offers, mixed tickets and mandatory purchases never pass as free', ()
 })
 
 test('outside-Lima locations, cancellations and missing dates are excluded', () => {
-  for (const address of [{ addressLocality: 'Callao' }, { addressRegion: 'Arequipa' }, { addressCountry: 'CL' }]) {
+  for (const address of [{ addressLocality: 'Arequipa' }, { addressRegion: 'Arequipa' }, { addressCountry: 'CL' }]) {
     assert.equal(structuredCandidate({ ...event, location: { name: 'Lugar', address } }, { source: 'Prueba', url }), null)
   }
   assert.equal(structuredCandidate({ ...event, eventStatus: 'https://schema.org/EventCancelled' }, { source: 'Prueba', url }), null)
@@ -53,6 +55,48 @@ test('outside-Lima locations, cancellations and missing dates are excluded', () 
   assert.equal(structuredCandidate({ ...event, location: { name: 'Plaza de Armas de Ica', address: { addressLocality: 'Lima' } } }, { source: 'Prueba', url }), null)
   assert.equal(findLimaDistrict('Av. Principal, San Juan de Miraflores, Lima'), 'San Juan de Miraflores')
   assert.equal(findLimaDistrict('Lima'), undefined)
+})
+
+test('Minka is discovered and Callao candidates retain their actual department', () => {
+  const detail = 'https://entradalibre.me/event/aniversario-con-gian-marco/'
+  const listing = `<article class="elini-ev"><h3><a href="${detail}">Gian Marco</a></h3><p class="meta">7 nov<br>Callao</p></article>`
+  assert.deepEqual(entradaLibreListing(listing, 'https://entradalibre.me/eventos/').urls, [detail])
+  for (const district of ['Callao', 'Bellavista', 'Carmen de la Legua Reynoso', 'La Perla', 'La Punta', 'Mi Perú', 'Ventanilla']) {
+    const candidate = parseEntradaLibreEvent(schema({ ...event, name: 'Aniversario con Gian Marco',
+      location: { name: 'Minka', address: { addressLocality: district, addressRegion: 'Callao', addressCountry: 'PE' } } }), detail)[0]!
+    assert.ok(candidate, district)
+    assert.equal(publicationDecision(candidate, '2026-11-06').status, 'published')
+    assert.equal(toEventInsert(candidate, 'entrada-libre', 'published').department, 'Callao')
+  }
+})
+
+test('conflicting explicit activity dates are rejected without inventing a replacement date', () => {
+  const candidate = parseEntradaLibreEvent(schema({ ...event, startDate: '2026-11-07T17:00-05:00',
+    endDate: '2026-11-07T19:00-05:00', description: 'Gian Marco en Minka. Fecha: miércoles 25 de noviembre. Entrada libre.',
+    location: { name: 'Minka', address: { addressLocality: 'Callao', addressRegion: 'Lima' } } }), url)[0]!
+  assert.ok(candidate)
+  assert.equal(candidate.startDate, '2026-11-07')
+  assert.ok(publicationDecision(candidate, '2026-11-06').reasons.includes('schedule:conflicting_dates'))
+  const consistent = structuredCandidate({ ...event, description: 'Fecha: sábado 14 de noviembre. Entrada libre.' }, { source: 'Prueba', url })!
+  assert.deepEqual(consistent.qualityIssues, [])
+})
+
+test('schema image strings, arrays and ImageObjects preserve the original event artwork', () => {
+  const image = 'https://entradalibre.me/poster.jpg'
+  for (const value of [image, [image], { url: image }, { contentUrl: 'javascript:alert(1)', url: image }, [{ '@type': 'ImageObject', contentUrl: image }], ['javascript:alert(1)', { url: image }]]) {
+    assert.equal(structuredCandidate({ ...event, image: value }, { source: 'Prueba', url })?.imageUrl, image)
+  }
+  assert.equal(structuredCandidate({ ...event, image: { url: 'javascript:alert(1)' } }, { source: 'Prueba', url })?.imageUrl, undefined)
+})
+
+test('date consistency accepts explicit dates inside a multi-month range and country objects', () => {
+  const candidate = structuredCandidate({ ...event, startDate: '2026-11-30T17:00-05:00', endDate: '2026-12-02T19:00-05:00',
+    description: 'Fecha: martes 1 de diciembre de 2026. Entrada libre.',
+    location: { name: 'Centro cultural', address: { addressLocality: 'Miraflores', addressRegion: 'Lima', addressCountry: { name: 'Perú' } } },
+  }, { source: 'Prueba', url })!
+  assert.ok(candidate)
+  assert.deepEqual(candidate.qualityIssues, [])
+  assert.equal(candidate.endDate, '2026-12-02')
 })
 
 test('unpublished registration links are not invented', () => {

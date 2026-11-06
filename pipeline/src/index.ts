@@ -57,7 +57,7 @@ async function runSource(
       const decision = publicationDecision(candidate)
       if (decision.status === 'rejected') {
         counters.rejected += 1
-        if (dryRun) console.log(`  descartado: ${candidate.title.slice(0, 60)} → ${decision.reasons.join(', ')}`)
+        console.log(`  descartado: ${candidate.title.slice(0, 60)} → ${decision.reasons.join(', ')}`)
         continue
       }
 

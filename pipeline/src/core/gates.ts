@@ -46,12 +46,19 @@ const LIMA_DISTRICT_NAMES = [
     'Villa María del Triunfo',
   ]
 const LIMA_DISTRICTS = new Set(LIMA_DISTRICT_NAMES.map((d) => normalizeText(d)))
+const CALLAO_DISTRICTS = ['Callao', 'Bellavista', 'Carmen de la Legua Reynoso', 'La Perla', 'La Punta', 'Mi Perú', 'Ventanilla']
+const CALLAO_KEYS = new Set(CALLAO_DISTRICTS.map(normalizeText))
+
+export function eventDepartment(district?: string): 'Lima' | 'Callao' {
+  return CALLAO_KEYS.has(normalizeText(district ?? '')) ? 'Callao' : 'Lima'
+}
+
+const COVERED_DISTRICTS = ['Cercado de Lima', ...LIMA_DISTRICT_NAMES, ...CALLAO_DISTRICTS]
+  .sort((a, b) => b.length - a.length)
 
 export function findLimaDistrict(value: string): string | undefined {
   const normalized = ` ${normalizeText(value)} `
-  if (/\bcallao\b/.test(normalized)) return undefined
-  return ['Cercado de Lima', ...LIMA_DISTRICT_NAMES]
-    .sort((a, b) => b.length - a.length)
+  return COVERED_DISTRICTS
     .find((district) => normalized.includes(` ${normalizeText(district)} `))
 }
 
@@ -61,7 +68,7 @@ const DISTRICT_ALIASES: Record<string, string> = {
   'san borja lima': 'San Borja',
 }
 
-const NOT_LIMA = new Set(['callao', 'constitutional del callao', 'provincia constitucional del callao'])
+const NOT_LIMA = new Set(['arequipa', 'ica', 'huancayo', 'chiclayo', 'piura', 'trujillo', 'cusco', 'huaral', 'chimbote', 'pucallpa', 'tacna'])
 
 const PAID_PATTERN = /\bs\/\.\s*\d|\bs\/\s*\d|US\$\s*\d|\$\s*\d|precio\s*:?\s*\d|desde\s+s\/|entrada\s*:?\s*s\//i
 
@@ -72,7 +79,7 @@ export function isLimaDistrict(value: string): 'ok' | 'alias' | 'outside' | 'unk
   const key = normalizeText(value)
   if (NOT_LIMA.has(key)) return 'outside'
   if (DISTRICT_ALIASES[key]) return 'alias'
-  if (LIMA_DISTRICTS.has(key)) return 'ok'
+  if (LIMA_DISTRICTS.has(key) || CALLAO_KEYS.has(key)) return 'ok'
   return 'unknown'
 }
 

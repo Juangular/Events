@@ -38,16 +38,17 @@ alter table public.events enable row level security;
 
 drop policy if exists "Public can read current free events" on public.events;
 drop policy if exists "Public can read free Lima events" on public.events;
+drop policy if exists "Public can read free Lima and Callao events" on public.events;
 
--- Lectura pública de eventos gratuitos de Lima publicados, con cualquier fecha.
+-- Lectura pública de eventos gratuitos de Lima y Callao publicados, con cualquier fecha.
 -- El sitio separa en la interfaz entre eventos disponibles y eventos pasados.
-create policy "Public can read free Lima events"
+create policy "Public can read free Lima and Callao events"
 on public.events for select
 to anon, authenticated
 using (
   status = 'published'
   and price_type = 'free'
-  and department = 'Lima'
+  and department in ('Lima', 'Callao')
 );
 
 create index if not exists events_public_dates_idx on public.events (department, status, price_type, start_date, end_date);

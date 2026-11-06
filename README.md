@@ -1,6 +1,6 @@
 # Plan Lima
 
-Guía pública de eventos gratuitos en Lima. El frontend está construido con React, TypeScript y Vite; los eventos publicados se leen desde Supabase.
+Guía pública de eventos gratuitos en Lima y Callao. El frontend está construido con React, TypeScript y Vite; los eventos publicados se leen desde Supabase.
 
 ## Desarrollo local
 
@@ -28,7 +28,7 @@ VITE_SUPABASE_ANON_KEY=tu-clave-anon
 VITE_SITE_URL=https://tu-dominio.com
 ```
 
-La clave `anon` puede estar en el frontend porque las políticas RLS solo permiten leer eventos publicados, gratuitos, vigentes y de Lima. Nunca usar la `service_role` en este proyecto frontend.
+La clave `anon` puede estar en el frontend porque las políticas RLS solo permiten leer eventos publicados y gratuitos de Lima o Callao. Las fechas pasadas siguen disponibles para el archivo. Nunca usar la `service_role` en este proyecto frontend. En una base existente, ejecutar el esquema completo actualizado para habilitar también las lecturas de Callao.
 
 La aplicación interpreta las fechas de eventos como fechas de calendario en la zona horaria de Lima. Un evento se mantiene visible durante todo su `end_date`; si no tiene fecha final, se considera vigente durante todo su `start_date`.
 
@@ -38,7 +38,7 @@ Desde `Supabase > Table Editor > events`, crear registros con estos valores mín
 
 - `status`: `published`
 - `price_type`: `free`
-- `department`: `Lima`
+- `department`: `Lima` o `Callao`
 - `title`, `description`, `category`, `modality`
 - `start_date` y opcionalmente `end_date`
 - `time`, `place`, `organizer`
@@ -60,11 +60,11 @@ La gestión mínima del contenido se realiza en el dashboard de Supabase. No exi
 
 ## Ingesta automática de eventos
 
-El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuitos de Lima desde fuentes públicas y los escribe en `events`. Se ejecuta automáticamente con GitHub Actions (`.github/workflows/ingest-events.yml`) una vez al día a las 06:00 America/Lima y también puede correrse a mano desde la pestaña *Actions* con *Run workflow*. Cada ejecución consulta todas las fuentes: inserta únicamente eventos nuevos y omite duplicados; si no hay novedades, no cambia nada.
+El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuitos de Lima y Callao desde fuentes públicas y los escribe en `events`. Se ejecuta automáticamente con GitHub Actions (`.github/workflows/ingest-events.yml`) una vez al día a las 06:00 America/Lima y también puede correrse a mano desde la pestaña *Actions* con *Run workflow*. Cada ejecución consulta todas las fuentes: inserta únicamente eventos nuevos y omite duplicados; si no hay novedades, no cambia nada.
 
 Fuentes actuales:
 
-- **Agenda Cultural del Ministerio de Cultura** (`gob.pe`): se descarga el PDF semanal más reciente y se extraen únicamente actividades explícitamente gratuitas, con dirección en Lima o modalidad virtual. Se descartan actividades con costo, con boleto pago, de Callao y de otras regiones.
+- **Agenda Cultural del Ministerio de Cultura** (`gob.pe`): se descarga el PDF semanal más reciente y se extraen únicamente actividades explícitamente gratuitas, con dirección en Lima/Callao o modalidad virtual. Se descartan actividades con costo, con boleto pago y de otras regiones.
 - **Eventbrite Lima** (`free--events`): datos estructurados JSON-LD; se acepta solo lo que la fuente marca con precio 0. Es una fuente de mejor esfuerzo: AWS WAF puede bloquear las IPs de GitHub Actions. El pipeline reintenta con Chromium/Playwright y, si no logra pasar el desafío, registra el error sin detener las demás fuentes.
 - **Academia IPD**: descubre la temporada vigente y consulta los horarios oficiales por disciplina y complejo. Genera una tarjeta semanal por disciplina/sede con edades y horarios exactos; descarta horarios inválidos y regiones fuera de Lima. Requiere preinscripción en línea.
 - **Municipalidad de San Isidro**: campañas con fecha, lugar, horario, gratuidad explícita e imagen oficial. Se descartan avisos administrativos, actividades con costo y eventos finalizados.
@@ -77,7 +77,7 @@ Fuentes actuales:
 - **Gran Teatro Nacional** (`gran-teatro-nacional`): `https://granteatronacional.pe/eventos`, San Borja. Usa fecha y horario del texto de la función, no el enlace de calendario cuando es inconsistente. Si exige inscripción y todavía dice `[pronto]`, se omite hasta que publique un enlace real. No se extraen sus imágenes `/sites/*`, restringidas en robots.txt.
 - **Mall del Sur** (`mall-del-sur`): `https://malldelsur.pe/eventos/`, San Juan de Miraflores. Recorre la paginación y descarta promociones que exigen compras o consumo mínimo, aunque digan «gratis». Las recurrencias explícitas generan fechas solo para los días indicados.
 - **Plaza Norte** (`plaza-norte`): `https://plazanorte.pe/eventos/`, Independencia. Procesa las fichas oficiales etiquetadas como gratuitas, con fecha, horario y recinto; comparte el parser de Events Manager con Mall del Sur.
-- **EntradaLibre** (`entrada-libre`): `https://entradalibre.me/eventos/`. Recorre el listado nacional paginado, selecciona distritos de Lima y extrae el `Event` JSON-LD de cada ficha. Publica directamente los candidatos válidos y reconoce la etiqueta de inscripción y su enlace real.
+- **EntradaLibre** (`entrada-libre`): `https://entradalibre.me/eventos/`. Recorre el listado nacional paginado, selecciona distritos de Lima y Callao y extrae el `Event` JSON-LD de cada ficha. Publica directamente los candidatos válidos y reconoce la etiqueta de inscripción y su enlace real. Las fechas explícitas de actividad que contradicen los datos estructurados se descartan con `schedule:conflicting_dates`; el motivo se imprime también en la ingesta real.
 - **Running4Peru** (`running4peru`): `https://www.running4peru.com/eventos`. Solo fichas gratuitas de Lima, dentro de un horizonte de 90 días, con pausa de 10 segundos entre consultas y navegador de respaldo si encuentra una pantalla de verificación. Publica automáticamente los candidatos válidos.
 - **Vamos Eventos** (`vamos-eventos`): `https://www.vamoseventos.com/lima/gratis`. Excluye las recomendaciones de pago del listado y extrae la descripción principal de cada evento, no sus anuncios. Guarda la publicación original cuando aparece en `raw.originalUrl` y publica los candidatos válidos. El proveedor publica restricciones de extracción automatizada en sus términos: esta integración técnica no otorga derechos de reutilización.
 
@@ -87,13 +87,13 @@ Las nuevas fuentes tienen límites de 20 páginas y 500 fichas por ejecución, e
 
 Cuando un evento no tiene `image_url`, la interfaz busca una imagen relacionada con el título dentro de su categoría y, si no encuentra coincidencia, usa la imagen general de la categoría. Tarjetas y modal comparten el fallback de imagen propia a imagen por título y finalmente por categoría, sin reintentos en bucle. Las imágenes manuales en Supabase no se modifican con las corridas del pipeline.
 
-Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar). Los registros automáticos llevan `origin = 'auto'` y `source_key`; RLS muestra solo eventos publicados, gratuitos y de Lima, y la interfaz organiza las fechas actuales, futuras y de archivo.
+Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima o Callao, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar), leyendo todas las páginas de resultados. Los registros automáticos llevan `origin = 'auto'` y `source_key`; `department` conserva Callao cuando corresponde. RLS muestra solo eventos publicados, gratuitos y de Lima/Callao, y la interfaz organiza las fechas actuales, futuras y de archivo.
 
 ### Publicación directa
 
 Por petición de Juan, **todos los candidatos válidos de todas las fuentes se publican directamente** (`status = 'published'`), incluidos EntradaLibre, Running4Peru y Vamos. No hay modo de revisión ni excepciones por ser un agregador.
 
-`pipeline/src/core/publication.ts` unifica la decisión: publicar o descartar. Se mantienen los controles de gratuidad, Lima, vigencia, URLs, datos imprescindibles e inscripción. Los candidatos inválidos no se convierten en borradores ni se publican con datos inventados. Los duplicados siguen omitiéndose y no se sobrescriben registros existentes.
+`pipeline/src/core/publication.ts` unifica la decisión: publicar o descartar. Se mantienen los controles de gratuidad, Lima/Callao, vigencia, URLs, datos imprescindibles e inscripción. Los candidatos inválidos no se convierten en borradores ni se publican con datos inventados. Los duplicados siguen omitiéndose y no se sobrescriben registros existentes.
 
 El pipeline ya no lee `PUBLISH_MODE` ni `automation_settings.publish_mode`. La tabla histórica se conserva para compatibilidad, pero cambiar esa fila no reactiva un modo de revisión. Los borradores antiguos no se promocionan por este cambio; la aprobación puntual de 205 registros fue una operación separada.
 
@@ -146,16 +146,25 @@ La interfaz permite alternar entre **Disponibles** y **Pasados** junto al select
 ```sql
 drop policy if exists "Public can read current free events" on public.events;
 drop policy if exists "Public can read free Lima events" on public.events;
+drop policy if exists "Public can read free Lima and Callao events" on public.events;
 
-create policy "Public can read free Lima events"
+create policy "Public can read free Lima and Callao events"
 on public.events for select
 to anon, authenticated
 using (
   status = 'published'
   and price_type = 'free'
-  and department = 'Lima'
+  and department in ('Lima', 'Callao')
 );
 ```
+
+### Adaptación de datos y carga de imágenes
+
+La consulta pública trae solo eventos que se superponen con el mes seleccionado, incluidos los que comenzaron antes y aún continúan. Pagina de 500 en 500 con orden estable para superar el límite predeterminado de la API. Al cambiar de mes cancela la petición anterior. Una fila inválida se omite con aviso; una URL de imagen inválida usa el fallback sin descartar el evento.
+
+Los parsers compartidos aceptan imágenes JSON-LD como URL, lista o `ImageObject`. Los afiches del detalle usan `object-fit: contain` y un alto máximo de `65svh`: se conserva la imagen completa tanto en vertical como en horizontal. Las tarjetas reservan su espacio y activan su imagen a 300 px de la pantalla; esto evita que la carga diferida nativa descargue afiches muy alejados. Si `IntersectionObserver` no está disponible, se usa la carga nativa.
+
+La interpretación automática funciona para las fuentes configuradas y los formatos reconocidos. Un cambio de estructura requiere adaptar el parser; una fecha, precio o inscripción ambiguos se descartan y nunca se completan por suposición.
 
 ## Cargar lugares recomendados
 

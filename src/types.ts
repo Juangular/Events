@@ -14,6 +14,7 @@ export interface EventItem {
   time: string
   place: string
   district?: string
+  department?: 'Lima' | 'Callao'
   organizer: string
   source: string
   sourceUrl: string

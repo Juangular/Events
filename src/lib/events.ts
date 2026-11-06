@@ -16,12 +16,13 @@ function isEventRow(value: unknown): value is EventRow {
     && typeof row.description === 'string' && row.description.trim().length > 0
     && typeof row.category === 'string' && categories.has(row.category)
     && typeof row.modality === 'string' && modalities.has(row.modality)
-    && (row.image_url === null || (typeof row.image_url === 'string' && isValidImageUrl(row.image_url)))
+    && (row.image_url === null || typeof row.image_url === 'string')
     && typeof row.start_date === 'string' && isValidDateKey(row.start_date)
     && (row.end_date === null || (typeof row.end_date === 'string' && isValidDateKey(row.end_date) && row.end_date >= row.start_date))
     && typeof row.time === 'string' && row.time.trim().length > 0
     && typeof row.place === 'string' && row.place.trim().length > 0
-    && row.department === 'Lima'
+    && (row.district === null || typeof row.district === 'string')
+    && (row.department === 'Lima' || row.department === 'Callao')
     && typeof row.organizer === 'string' && row.organizer.trim().length > 0
     && typeof row.source === 'string' && row.source.trim().length > 0
     && typeof row.source_url === 'string' && isValidHttpsUrl(row.source_url)
@@ -41,12 +42,13 @@ function mapRow(row: EventRow): EventItem {
     description: row.description,
     category: row.category,
     modality: row.modality,
-    image: getEventImage(row.category, row.image_url, row.title),
+    image: getEventImage(row.category, row.image_url && isValidImageUrl(row.image_url) ? row.image_url : null, row.title),
     startDate: row.start_date,
     endDate: row.end_date || undefined,
     time: row.time,
     place: row.place,
     district: row.district || undefined,
+    department: row.department as 'Lima' | 'Callao',
     organizer: row.organizer,
     source: row.source,
     sourceUrl: row.source_url,
@@ -57,29 +59,42 @@ function mapRow(row: EventRow): EventItem {
   }
 }
 
-export async function getPublicEvents(): Promise<EventItem[]> {
+export async function getPublicEvents(month: number, year: number, signal?: AbortSignal): Promise<EventItem[]> {
   if (!supabase) {
     if (import.meta.env.DEV) return fallbackEvents
     throw new Error('Supabase no está configurado')
   }
 
-  const { data, error } = await supabase
-    .from('events')
-    .select('id,title,description,category,modality,image_url,start_date,end_date,time,place,district,department,organizer,source,source_url,registration_url,requires_registration,price_type,status,tags,updated_at')
-    .eq('status', 'published')
-    .eq('price_type', 'free')
-    .eq('department', 'Lima')
-    .order('start_date', { ascending: true })
+  const first = `${year}-${String(month + 1).padStart(2, '0')}-01`
+  const last = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`
+  const rows: EventRow[] = []
+  const pageSize = 500
+  for (let offset = 0; ; offset += pageSize) {
+    let request = supabase
+      .from('events')
+      .select('id,title,description,category,modality,image_url,start_date,end_date,time,place,district,department,organizer,source,source_url,registration_url,requires_registration,price_type,status,tags,updated_at')
+      .eq('status', 'published')
+      .eq('price_type', 'free')
+      .in('department', ['Lima', 'Callao'])
+      .lte('start_date', last)
+      .or(`end_date.gte.${first},and(end_date.is.null,start_date.gte.${first})`)
+      .order('start_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1)
+    if (signal) request = request.abortSignal(signal)
+    const { data, error } = await request
 
-  if (error) {
-    console.error('[events] Supabase query failed:', error)
-    throw new Error(error.message)
+    if (error) {
+      if (!signal?.aborted) console.error('[events] Supabase query failed:', error)
+      throw new Error(error.message)
+    }
+
+    if (!Array.isArray(data)) throw new Error('La agenda tiene datos inválidos')
+    const validRows = data.filter(isEventRow)
+    if (validRows.length !== data.length) console.warn(`[events] Se omitieron ${data.length - validRows.length} registros inválidos`)
+    rows.push(...validRows)
+    if (data.length < pageSize) break
   }
 
-  if (!data || !data.every(isEventRow)) {
-    console.error('[events] Supabase returned an invalid event payload')
-    throw new Error('La agenda tiene datos inválidos')
-  }
-
-  return data.map(mapRow)
+  return rows.map(mapRow)
 }

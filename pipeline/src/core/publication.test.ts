@@ -20,7 +20,7 @@ test('all valid sources publish without an aggregator or legacy review exception
 test('invalid data is rejected, never stored as a draft or published', () => {
   const invalid: CandidateEvent[] = [
     { ...valid, description: 'Entrada S/50.' }, { ...valid, startDate: '2026-11-05' },
-    { ...valid, district: 'Callao' }, { ...valid, district: undefined },
+    { ...valid, district: 'Arequipa' }, { ...valid, district: undefined },
     { ...valid, requiresRegistration: true }, { ...valid, qualityIssues: ['date:inferred'] },
     { ...valid, qualityIssues: ['schedule:ambiguous'] }, { ...valid, time: 'Consultar horario' },
     { ...valid, freeSignal: false, description: 'Actividad sin precio confirmado.' },

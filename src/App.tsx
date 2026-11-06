@@ -10,6 +10,7 @@ import type { EventScope } from './lib/event-view'
 import { eventSortOptions, sortEvents } from './lib/event-sort'
 import type { EventSort } from './lib/event-sort'
 import { useDialogLifecycle } from './hooks/useDialogLifecycle'
+import { CardImage } from './components/CardImage'
 import type { EventItem, PlaceItem } from './types'
 
 const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -79,8 +80,16 @@ function App() {
   const closeSelectedPlace = useCallback(() => setSelectedPlace(null), [])
 
   useEffect(() => {
-    getPublicEvents().then(setEvents).catch(() => setLoadError('No pudimos cargar los eventos.')).finally(() => setLoading(false))
-  }, [])
+    const controller = new AbortController()
+    setLoading(true)
+    setLoadError(null)
+    setEvents([])
+    getPublicEvents(month, year, controller.signal)
+      .then((items) => { if (!controller.signal.aborted) setEvents(items) })
+      .catch(() => { if (!controller.signal.aborted) setLoadError('No pudimos cargar los eventos.') })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [month, year])
 
   useEffect(() => {
     getPublicPlaces().then(setPlaces).catch(() => setPlacesError('No pudimos cargar los lugares.')).finally(() => setPlacesLoading(false))
@@ -167,7 +176,7 @@ function App() {
       <main id="top" tabIndex={-1}>
         <section className="hero">
           <div className="hero-copy">
-            <div className="eyebrow"><span className="eyebrow-line" /> Eventos y lugares de Lima</div>
+            <div className="eyebrow"><span className="eyebrow-line" /> Eventos y lugares de Lima y Callao</div>
             <h1>Planes gratis<br /><em>en Lima.</em></h1>
             <p className="hero-intro">Busca conciertos, talleres y actividades por fecha o categoría. Descubre también lugares gratuitos para recorrer la ciudad.</p>
             <a className="hero-cta" href="#eventos">Ver eventos gratis <ArrowUpRight size={16} aria-hidden="true" /></a>
@@ -180,7 +189,7 @@ function App() {
         </section>
 
         <section className="explorer" id="eventos">
-          <div className="section-heading"><div><span className="section-kicker">Agenda gratuita</span><h2>Encuentra tu próximo plan</h2></div><div className="explorer-location"><span className="location-label"><MapPin size={15} aria-hidden="true" /> Lima, Perú</span><span className="free-pill"><Check size={13} aria-hidden="true" /> Todo gratis</span></div></div>
+          <div className="section-heading"><div><span className="section-kicker">Agenda gratuita</span><h2>Encuentra tu próximo plan</h2></div><div className="explorer-location"><span className="location-label"><MapPin size={15} aria-hidden="true" /> Lima y Callao, Perú</span><span className="free-pill"><Check size={13} aria-hidden="true" /> Todo gratis</span></div></div>
            <div className="search-row"><div className="search-box"><Search size={19} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por nombre, lugar o tema..." aria-label="Buscar eventos" />{query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} aria-hidden="true" /></button>}</div><button className="filter-toggle" aria-expanded={mobileFilters} aria-controls="filtros-eventos" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? <X size={17} aria-hidden="true" /> : <SlidersHorizontal size={17} aria-hidden="true" />} {mobileFilters ? 'Ocultar filtros' : 'Filtros'}</button></div>
            <div className={`filter-bar ${mobileFilters ? 'is-open' : ''}`} id="filtros-eventos">
               <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)}><ChevronRight size={17} /></button></div>
@@ -254,13 +263,13 @@ function handleEventImageError(element: HTMLImageElement, event: EventItem) {
 }
 
 function EventCard({ event, index, onOpen }: { event: EventItem; index: number; onOpen: (event: EventItem) => void }) {
-  return <article className="event-card" role="button" tabIndex={0} aria-label={`Ver detalles de ${event.title}`} style={{ '--delay': `${index * 70}ms` } as React.CSSProperties} onClick={() => onOpen(event)} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') { keyboardEvent.preventDefault(); onOpen(event) } }}><div className="card-image-wrap"><img src={event.image} alt={event.title} loading={index > 2 ? 'lazy' : 'eager'} decoding="async" onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><span className="free-badge">GRATIS</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div><div className="card-content"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h3>{event.title}</h3><div className="card-date"><CalendarDays size={14} /> {formatDate(event.startDate, event.endDate)}</div><div className="card-place"><MapPin size={14} /> {event.district ?? event.place}</div>{event.requiresRegistration && <span className="registration-note">Requiere inscripción</span>}</div></article>
+  return <article className="event-card" role="button" tabIndex={0} aria-label={`Ver detalles de ${event.title}`} style={{ '--delay': `${index * 70}ms` } as React.CSSProperties} onClick={() => onOpen(event)} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') { keyboardEvent.preventDefault(); onOpen(event) } }}><div className="card-image-wrap"><CardImage src={event.image} alt={event.title} width={600} height={400} onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><span className="free-badge">GRATIS</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div><div className="card-content"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h3>{event.title}</h3><div className="card-date"><CalendarDays size={14} /> {formatDate(event.startDate, event.endDate)}</div><div className="card-place"><MapPin size={14} /> {event.district ?? event.place}</div>{event.requiresRegistration && <span className="registration-note">Requiere inscripción</span>}</div></article>
 }
 
 function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; onOpen: (place: PlaceItem) => void }) {
   return <article className="place-card" style={{ '--delay': `${index * 50}ms` } as React.CSSProperties}>
     <button className="place-card-trigger" aria-label={`Ver detalles de ${place.name}`} onClick={() => onOpen(place)}>
-      <div className="place-image-wrap"><img src={place.image} alt={place.name} loading={index > 2 ? 'lazy' : 'eager'} decoding="async" onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><span className="free-badge">{place.priceType === 'free' ? 'GRATIS' : 'DE PAGO'}</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div>
+      <div className="place-image-wrap"><CardImage src={place.image} alt={place.name} width={600} height={400} onError={(imageEvent) => { imageEvent.currentTarget.src = fallbackImage; imageEvent.currentTarget.onerror = null }} /><span className="free-badge">{place.priceType === 'free' ? 'GRATIS' : 'DE PAGO'}</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div>
       <div className="place-content"><h3>{place.name}</h3><div className="card-place"><MapPin size={14} /> {place.district}</div></div>
     </button>
     <a className="maps-button" href={place.sourceUrl} target="_blank" rel="noopener noreferrer"><MapPin size={14} aria-hidden="true" /> Ver en Google Maps</a>
@@ -270,7 +279,7 @@ function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; 
 function EventModal({ event, onClose }: { event: EventItem; onClose: () => void }) {
   const { closeButtonRef, dialogRef } = useDialogLifecycle(onClose)
 
-  return <div className="modal-backdrop" onClick={onClose}><div ref={dialogRef} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p id="event-dialog-description" className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}, Lima</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver detalles en el sitio oficial'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
+  return <div className="modal-backdrop" onClick={onClose}><div ref={dialogRef} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} decoding="async" onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p id="event-dialog-description" className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}{event.department !== 'Callao' && ', Lima'}</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver evento en la fuente'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
 }
 
 function PlaceModal({ place, onClose }: { place: PlaceItem; onClose: () => void }) {

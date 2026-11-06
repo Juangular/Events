@@ -225,6 +225,7 @@ input { caret-color: var(--green); }
 .event-card, .place-card { animation: none; }
 .card-image-wrap, .place-image-wrap { height: auto; aspect-ratio: 3 / 2; border-radius: 6px; box-shadow: none; background: #dddcd2; }
 .card-image-wrap img, .place-image-wrap img { display: block; }
+.card-image-wrap img[data-pending], .place-image-wrap img[data-pending] { opacity: 0; }
 .card-image-wrap::after, .place-image-wrap::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(24,37,31,.08); border-radius: inherit; }
 .free-badge { z-index: 1; left: 14px; top: 14px; border-radius: 3px; padding: 8px 10px; }
 .card-arrow { z-index: 1; right: 14px; top: 14px; width: 38px; height: 38px; background: #1b3528; }
@@ -252,6 +253,9 @@ footer { min-height: 116px; font-size: 13px; line-height: 1.5; }
 footer .footer-brand { font-size: 17px; }
 footer p { color: #c8d3c9; }
 .event-modal { border-radius: 8px; }
+.event-modal .modal-image { width: 100%; height: auto; max-height: 65svh; object-fit: contain; background: #e9e6da; }
+.event-modal { max-height: 92svh; }
+.detail-grid > div { min-width: 0; overflow-wrap: anywhere; }
 .modal-body h2 { line-height: 1.08; letter-spacing: -.03em; }
 .modal-description, .place-description p { color: var(--ink-soft); font-size: 15px; }
 .detail-grid span, .place-location span, .place-entry span, .place-description span { color: #526157; }

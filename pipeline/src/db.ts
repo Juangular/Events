@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { CandidateEvent, RunCounters } from './types'
 import { fingerprint } from './core/text'
+import { eventDepartment } from './core/gates'
 
 export interface EventInsert {
   title: string
@@ -13,7 +14,7 @@ export interface EventInsert {
   time: string
   place: string
   district: string | null
-  department: 'Lima'
+  department: 'Lima' | 'Callao'
   organizer: string
   source: string
   source_url: string
@@ -42,9 +43,15 @@ export function createAdminClient(): SupabaseClient {
 }
 
 export async function existingFingerprints(client: SupabaseClient): Promise<Set<string>> {
-  const { data, error } = await client.from('events').select('fingerprint').not('fingerprint', 'is', null)
-  if (error) throw new Error(`No se pudieron leer fingerprints: ${error.message}`)
-  return new Set((data ?? []).map((row) => row.fingerprint as string))
+  const known = new Set<string>()
+  const pageSize = 500
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from('events').select('fingerprint').not('fingerprint', 'is', null)
+      .order('id', { ascending: true }).range(offset, offset + pageSize - 1)
+    if (error) throw new Error(`No se pudieron leer fingerprints: ${error.message}`)
+    for (const row of data ?? []) known.add(row.fingerprint as string)
+    if (!data || data.length < pageSize) return known
+  }
 }
 
 export function toEventInsert(
@@ -63,7 +70,7 @@ export function toEventInsert(
     time: candidate.time.trim(),
     place: candidate.place.trim(),
     district: candidate.district?.trim() || null,
-    department: 'Lima',
+    department: eventDepartment(candidate.district),
     organizer: candidate.organizer.trim(),
     source: candidate.source.trim(),
     source_url: candidate.sourceUrl,

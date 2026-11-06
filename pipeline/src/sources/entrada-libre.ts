@@ -10,7 +10,7 @@ export function entradaLibreListing(html: string, url: string): ListingPage {
   if (!cards.length && !/0 planes|no (?:hay|encontramos) (?:eventos|planes)/i.test(pageText(html))) throw new Error('Listado EntradaLibre no reconocido')
   const urls = new Set<string>()
   cards.each((_, el) => {
-    // The national listing also includes cities outside Lima.
+    // The national listing also includes cities outside Lima and Callao.
     if (!findLimaDistrict(pageText($(el).find('.meta').html() ?? ''))) return
     const detail = sameSiteUrl($(el).find('h3 a').attr('href') ?? '', url, /^\/event\/[^/]+\/$/)
     if (detail) urls.add(detail)
