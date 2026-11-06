@@ -57,6 +57,7 @@ function App() {
   const [placesError, setPlacesError] = useState<string | null>(null)
   const [category, setCategory] = useState<(typeof categories)[number]>('Todas')
   const [modality, setModality] = useState('Todas')
+  const [district, setDistrict] = useState('')
   const [scope, setScope] = useState<'disponibles' | 'pasados'>('disponibles')
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -108,16 +109,19 @@ function App() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [menuOpen])
 
+  const districts = useMemo(() => [...new Set(events.flatMap((event) => event.district ? [event.district] : []))].sort((a, b) => a.localeCompare(b, 'es')), [events])
+
   const filtered = useMemo(() => events.filter((event) => {
     const matchesMonth = overlapsMonth(event, month, year)
     const eventEnd = event.endDate ?? event.startDate
     const matchesScope = scope === 'pasados' ? eventEnd < getLocalDateKey() : eventEnd >= getLocalDateKey()
     const matchesCategory = category === 'Todas' || event.category === category
     const matchesModality = modality === 'Todas' || event.modality === modality
+    const matchesDistrict = !district || event.district === district
     const search = debouncedQuery.toLowerCase()
     const matchesQuery = !search || `${event.title} ${event.description} ${event.place} ${event.category}`.toLowerCase().includes(search)
-    return matchesMonth && matchesScope && matchesCategory && matchesModality && matchesQuery
-  }).sort((a, b) => a.startDate.localeCompare(b.startDate)), [events, month, year, scope, category, modality, debouncedQuery])
+    return matchesMonth && matchesScope && matchesCategory && matchesModality && matchesDistrict && matchesQuery
+  }).sort((a, b) => a.startDate.localeCompare(b.startDate)), [events, month, year, scope, category, modality, district, debouncedQuery])
 
   const shiftMonth = (direction: number) => {
     const next = new Date(year, month + direction, 1)
@@ -158,12 +162,13 @@ function App() {
               <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)}><ChevronRight size={17} /></button></div>
             <div className="mode-toggle" role="group" aria-label="Tipo de eventos"><button type="button" aria-pressed={scope === 'disponibles'} onClick={() => setScope('disponibles')}>Disponibles</button><button type="button" aria-pressed={scope === 'pasados'} onClick={() => setScope('pasados')}>Pasados</button></div>
             <label className="select-filter"><span>Categoría</span><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
-            <label className="select-filter"><span>Modalidad</span><select value={modality} onChange={(event) => setModality(event.target.value)}><option>Todas</option><option>Presencial</option><option>Virtual</option></select></label>
+             <label className="select-filter"><span>Modalidad</span><select value={modality} onChange={(event) => setModality(event.target.value)}><option>Todas</option><option>Presencial</option><option>Virtual</option></select></label>
+             <label className="select-filter"><span>Distrito</span><select value={district} onChange={(event) => setDistrict(event.target.value)}><option value="">Todos los distritos</option>{districts.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
             <span className="free-pill">● Todo gratis</span>
           </div>
         </section>
 
-        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>{scope === 'pasados' ? 'No hay eventos pasados en este mes.' : 'No hay eventos para esta búsqueda.'}</h3><p>{scope === 'pasados' ? 'Prueba con otro mes o vuelve a eventos disponibles.' : 'Prueba con otro mes, categoría, modalidad o palabra clave.'}</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setQuery('') }}>Ver todos los eventos del mes</button></div>}</section>
+        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>{scope === 'pasados' ? 'No hay eventos pasados en este mes.' : 'No hay eventos para esta búsqueda.'}</h3><p>{scope === 'pasados' ? 'Prueba con otro mes o distrito, o vuelve a eventos disponibles.' : 'Prueba con otro mes, categoría, modalidad, distrito o palabra clave.'}</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setDistrict(''); setQuery('') }}>Ver todos los eventos del mes</button></div>}</section>
 
         <section className="places-section" id="lugares">
           <div className="places-heading"><div><span className="section-kicker">Guía local</span><h2>Lugares que visitar en Lima</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
@@ -179,8 +184,15 @@ function App() {
   )
 }
 
+function handleEventImageError(element: HTMLImageElement, event: EventItem) {
+  const categoryImage = getEventImage(event.category)
+  if (element.src === categoryImage) return
+  const titleImage = getEventImage(event.category, null, event.title)
+  element.src = element.src === titleImage ? categoryImage : titleImage
+}
+
 function EventCard({ event, index, onOpen }: { event: EventItem; index: number; onOpen: (event: EventItem) => void }) {
-  return <article className="event-card" role="button" tabIndex={0} aria-label={`Ver detalles de ${event.title}`} style={{ '--delay': `${index * 70}ms` } as React.CSSProperties} onClick={() => onOpen(event)} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') { keyboardEvent.preventDefault(); onOpen(event) } }}><div className="card-image-wrap"><img src={event.image} alt={event.title} loading={index > 2 ? 'lazy' : 'eager'} decoding="async" onError={(imageEvent) => { imageEvent.currentTarget.src = getEventImage(event.category); imageEvent.currentTarget.onerror = null }} /><span className="free-badge">GRATIS</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div><div className="card-content"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h3>{event.title}</h3><div className="card-date"><CalendarDays size={14} /> {formatDate(event.startDate, event.endDate)}</div><div className="card-place"><MapPin size={14} /> {event.district ?? event.place}</div>{event.requiresRegistration && <span className="registration-note">Requiere inscripción</span>}</div></article>
+  return <article className="event-card" role="button" tabIndex={0} aria-label={`Ver detalles de ${event.title}`} style={{ '--delay': `${index * 70}ms` } as React.CSSProperties} onClick={() => onOpen(event)} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') { keyboardEvent.preventDefault(); onOpen(event) } }}><div className="card-image-wrap"><img src={event.image} alt={event.title} loading={index > 2 ? 'lazy' : 'eager'} decoding="async" onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><span className="free-badge">GRATIS</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div><div className="card-content"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h3>{event.title}</h3><div className="card-date"><CalendarDays size={14} /> {formatDate(event.startDate, event.endDate)}</div><div className="card-place"><MapPin size={14} /> {event.district ?? event.place}</div>{event.requiresRegistration && <span className="registration-note">Requiere inscripción</span>}</div></article>
 }
 
 function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; onOpen: (place: PlaceItem) => void }) {
@@ -196,7 +208,7 @@ function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; 
 function EventModal({ event, onClose }: { event: EventItem; onClose: () => void }) {
   const { closeButtonRef, dialogRef } = useDialogLifecycle(onClose)
 
-  return <div className="modal-backdrop" onClick={onClose}><div ref={dialogRef} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} onError={(imageEvent) => { imageEvent.currentTarget.src = getEventImage(event.category); imageEvent.currentTarget.onerror = null }} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p id="event-dialog-description" className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}, Lima</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver detalles en el sitio oficial'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
+  return <div className="modal-backdrop" onClick={onClose}><div ref={dialogRef} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p id="event-dialog-description" className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}, Lima</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver detalles en el sitio oficial'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
 }
 
 function PlaceModal({ place, onClose }: { place: PlaceItem; onClose: () => void }) {

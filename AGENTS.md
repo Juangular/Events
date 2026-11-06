@@ -5,7 +5,7 @@
 - Plan Lima is a single React + TypeScript + Vite frontend; there is no monorepo or backend application.
 - `src/App.tsx` owns the page UI, filters, mobile menu, event cards, and event detail modal.
 - `src/lib/events.ts` is the data boundary: it queries Supabase, validates rows, maps database names to `EventItem`, and uses `src/data.ts` only as a development fallback.
-- `src/lib/event-images.ts` selects a category-specific default when `image_url` is null; `src/App.tsx` applies the same fallback when an external image fails, in cards and modals.
+- `src/lib/event-images.ts` preserves `image_url` when present; otherwise it matches category-scoped title keywords (case/accent insensitive), then falls back to the category image. Cards and modals share an error fallback from the original image to the title image to the category image, without retry loops. Verify image selection with `node --test scripts/test-event-images.mjs` (Node 24+).
 - `src/lib/supabase.ts` creates the client from `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; never use or expose a `service_role` key.
 - `supabase/schema.sql` is the database source of truth. Public reads are restricted by RLS to published, free Lima events in Lima; the frontend separates available and past events by date, and there is no public admin panel.
 - `pipeline/` is a standalone Node + TypeScript ingestion tool (own `package.json`) that collects free Lima events from public sources and writes them to `events` with the `service_role` key; it never runs in the browser. It uses Playwright/Chromium only as a fallback for sources behind anti-bot challenges; official sources must keep working if that fallback fails.

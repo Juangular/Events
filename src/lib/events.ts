@@ -41,7 +41,7 @@ function mapRow(row: EventRow): EventItem {
     description: row.description,
     category: row.category,
     modality: row.modality,
-    image: getEventImage(row.category, row.image_url),
+    image: getEventImage(row.category, row.image_url, row.title),
     startDate: row.start_date,
     endDate: row.end_date || undefined,
     time: row.time,

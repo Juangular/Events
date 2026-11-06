@@ -143,6 +143,9 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
   .month-filter { gap: 8px; }
 }
 
+.filter-bar { flex-wrap: wrap; }
+.filter-bar .select-filter { flex: 1 1 150px; min-width: 0; }
+.filter-bar .select-filter select { width: 100%; }
 .mode-toggle { display: flex; border: 1px solid rgba(255,255,255,.25); min-height: 62px; overflow: hidden; }
 .mode-toggle button { background: transparent; border: 0; color: #b7c8b9; font: 500 11px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .5px; padding: 0 18px; cursor: pointer; transition: background .2s, color .2s; }
 .mode-toggle button + button { border-left: 1px solid rgba(255,255,255,.25); }
@@ -150,5 +153,6 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .mode-toggle button:hover { color: #fff; }
 
 @media (max-width: 760px) {
+  .filter-bar .select-filter { flex: 0 0 auto; }
   .mode-toggle { min-width: 100%; }
 }
