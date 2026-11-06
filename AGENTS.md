@@ -44,6 +44,8 @@
 - Automated rows use `origin = 'auto'`, `source_key`, and a unique `fingerprint`; do not edit those columns manually unless fixing bad data, and never change `origin` on hand-entered events.
 - The ingestion switch lives in `automation_settings` (`publish_mode = 'auto' | 'review'`): `auto` publishes candidates that pass every quality gate; `review` stores everything as `draft` for manual approval in the Supabase dashboard. Candidates with `needsReview = true` (for example, a source that omits the event start date or schedule) stay `draft` even in `auto` mode instead of inventing missing data. `sync_runs` records each run's counts and errors.
 - Source adapters live in `pipeline/src/sources/`; one file per source. Quality gates (free, Lima, dates, URLs) live in `pipeline/src/core/gates.ts` and must stay strict.
+- The six additional adapters are `gran-teatro-nacional`, `entrada-libre`, `mall-del-sur`, `plaza-norte`, `running4peru`, and `vamos-eventos`. Aggregator candidates from EntradaLibre, Running4Peru and Vamos always require review of the organizer's original announcement. Never auto-publish those leads, invent missing registration links, treat a purchase-conditioned promotion as free, or expand a monthly range into daily events without an explicit schedule.
+- Run `npm test` and `npm run typecheck` inside `pipeline/` for source changes. `core/source-page.ts` bounds crawls and validates discovered same-origin links; `core/mall-events.ts` shares parsing and explicit weekly schedules for the two malls. Running4Peru uses a 90-day horizon and a 10-second request delay. `PLAYWRIGHT_CHANNEL=chrome` is an optional local browser override; CI installs bundled Chromium.
 
 ## Deployment
 

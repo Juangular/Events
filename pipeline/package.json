@@ -6,7 +6,8 @@
   "scripts": {
     "ingest": "tsx src/index.ts",
     "ingest:dry": "tsx src/index.ts --dry-run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/sources/new-sources.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",

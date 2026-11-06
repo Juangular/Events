@@ -74,12 +74,20 @@ Fuentes actuales:
 - **San Miguel y Pueblo Libre**: se consultan campañas y noticias oficiales; solo se incorporan cuando contienen datos completos y vigentes. Actualmente no hay eventos futuros que cumplan ese requisito.
 - **Miraflores**: la agenda oficial `eventos-municipales` se procesa con los eventos disponibles, incluidos los antiguos, para validar la estructura de parsing (JSON-LD de cada página de evento). Los eventos pasados se descartan por fecha y no se publican; cuando la municipalidad publique eventos nuevos con la misma estructura, entrarán automáticamente. Si la estructura cambiara, la corrida fallaría como error de estructura en lugar de ignorarlo en silencio.
 - **Lugar de la Memoria (LUM)**: agenda mensual de actividades con ingreso libre y gratuito.
+- **Gran Teatro Nacional** (`gran-teatro-nacional`): `https://granteatronacional.pe/eventos`, San Borja. Usa fecha y horario del texto de la función, no el enlace de calendario cuando es inconsistente. Si exige inscripción y todavía dice `[pronto]`, se omite hasta que publique un enlace real. No se extraen sus imágenes `/sites/*`, restringidas en robots.txt.
+- **Mall del Sur** (`mall-del-sur`): `https://malldelsur.pe/eventos/`, San Juan de Miraflores. Recorre la paginación y descarta promociones que exigen compras o consumo mínimo, aunque digan «gratis». Las recurrencias explícitas generan fechas solo para los días indicados.
+- **Plaza Norte** (`plaza-norte`): `https://plazanorte.pe/eventos/`, Independencia. Procesa las fichas oficiales etiquetadas como gratuitas, con fecha, horario y recinto; comparte el parser de Events Manager con Mall del Sur.
+- **EntradaLibre** (`entrada-libre`): `https://entradalibre.me/eventos/`. Recorre el listado nacional paginado, selecciona distritos de Lima y extrae el `Event` JSON-LD de cada ficha. Sus candidatos entran como `draft` para verificar la publicación original del organizador.
+- **Running4Peru** (`running4peru`): `https://www.running4peru.com/eventos`. Solo fichas gratuitas de Lima, dentro de un horizonte de 90 días, con pausa de 10 segundos entre consultas y navegador de respaldo si encuentra una pantalla de verificación. Los datos agregados quedan en revisión.
+- **Vamos Eventos** (`vamos-eventos`): `https://www.vamoseventos.com/lima/gratis`. Excluye las recomendaciones de pago del listado y extrae la descripción principal de cada evento, no sus anuncios. Guarda la publicación original cuando aparece en `raw.originalUrl`; los candidatos quedan en revisión. El proveedor publica restricciones de extracción automatizada en sus términos: esta integración técnica no otorga derechos de reutilización.
 
-El workflow instala Chromium para el fallback anti-bot. Las fuentes oficiales no lo necesitan y continúan funcionando aunque Eventbrite no esté disponible.
+Hay 17 adaptadores registrados. El workflow instala Chromium para el fallback anti-bot de Eventbrite, Running4Peru y Vamos. Las fuentes oficiales siguen por HTTP y funcionan aunque el navegador no esté disponible. Para desarrollo local se puede usar Chrome ya instalado con `PLAYWRIGHT_CHANNEL=chrome`; en CI se utiliza Chromium por defecto. Un desafío no resuelto se reporta como error, nunca como una agenda vacía.
 
-Cuando un evento no tiene `image_url`, la interfaz usa una imagen por defecto según su categoría (`Cultura`, `Música`, `Deportes`, `Educación`, `Tecnología`, `Gastronomía`, `Familiar` u `Otros`). El mismo fallback por categoría se aplica si una imagen externa no carga. Las imágenes manuales en Supabase no se modifican con las corridas del pipeline.
+Las nuevas fuentes tienen límites de 20 páginas y 500 fichas por ejecución, enlaces restringidos al mismo dominio y fallos de estructura visibles. Las fichas sin fecha verificable o con inscripción obligatoria sin enlace se omiten: el esquema exige esos datos y no se inventan. Los horarios ambiguos o recurrencias no interpretadas quedan como `draft`. EntradaLibre, Running4Peru y Vamos conservan `needsReview = true` incluso en modo `auto`: antes de aprobar, verificar gratuidad, organizador, distrito y publicación original, y actualizar `source_url` a la fuente oficial confirmada.
 
-Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar). Los registros automáticos llevan `origin = 'auto'` y `source_key`; el flujo público no cambia: RLS sigue mostrando solo eventos publicados, gratuitos, vigentes y de Lima.
+Cuando un evento no tiene `image_url`, la interfaz busca una imagen relacionada con el título dentro de su categoría y, si no encuentra coincidencia, usa la imagen general de la categoría. Tarjetas y modal comparten el fallback de imagen propia a imagen por título y finalmente por categoría, sin reintentos en bucle. Las imágenes manuales en Supabase no se modifican con las corridas del pipeline.
+
+Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar). Los registros automáticos llevan `origin = 'auto'` y `source_key`; RLS muestra solo eventos publicados, gratuitos y de Lima, y la interfaz organiza las fechas actuales, futuras y de archivo.
 
 ### Modo de publicación
 
@@ -102,8 +110,12 @@ Cada corrida deja un registro en `sync_runs` (obtenidos, publicados, borradores,
 ```bash
 cd pipeline
 npm install
+npm test
+npm run typecheck
 npm run ingest:dry
 ```
+
+Para validar una sola fuente sin escribir: `npm run ingest:dry -- --source plaza-norte` (sustituir por cualquiera de las claves anteriores). Las pruebas cubren paginación y dominios permitidos, precios positivos o mixtos, compras obligatorias, distritos, horarios recurrentes, selección del evento principal frente a recomendaciones y enlaces de inscripción pendientes. El cron continúa diario a las 06:00 de Lima; un push publica el código en Vercel, pero la ingesta necesita el cron o una ejecución manual de Actions para añadir los registros a Supabase.
 
 Agregar una fuente nueva consiste en crear un adaptador en `pipeline/src/sources/` con la interfaz `SourceAdapter` y registrarlo en `pipeline/src/index.ts`. Si un sitio cambia de diseño, el adaptador falla de forma aislada: el error queda en `sync_runs` y las demás fuentes siguen funcionando.
 

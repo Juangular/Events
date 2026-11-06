@@ -1,8 +1,7 @@
 import type { CandidateEvent, GateResult } from '../types'
 import { isValidDateKey, isValidHttpsUrl, isoDateInLima, normalizeText } from './text'
 
-const LIMA_DISTRICTS = new Set(
-  [
+const LIMA_DISTRICT_NAMES = [
     'Ancón',
     'Ate',
     'Barranco',
@@ -45,8 +44,16 @@ const LIMA_DISTRICTS = new Set(
     'Surquillo',
     'Villa El Salvador',
     'Villa María del Triunfo',
-  ].map((d) => normalizeText(d)),
-)
+  ]
+const LIMA_DISTRICTS = new Set(LIMA_DISTRICT_NAMES.map((d) => normalizeText(d)))
+
+export function findLimaDistrict(value: string): string | undefined {
+  const normalized = ` ${normalizeText(value)} `
+  if (/\bcallao\b/.test(normalized)) return undefined
+  return ['Cercado de Lima', ...LIMA_DISTRICT_NAMES]
+    .sort((a, b) => b.length - a.length)
+    .find((district) => normalized.includes(` ${normalizeText(district)} `))
+}
 
 const DISTRICT_ALIASES: Record<string, string> = {
   lima: 'Cercado de Lima',
@@ -56,7 +63,7 @@ const DISTRICT_ALIASES: Record<string, string> = {
 
 const NOT_LIMA = new Set(['callao', 'constitutional del callao', 'provincia constitucional del callao'])
 
-const PAID_PATTERN = /\bs\/\.\s*\d|\bs\/\s*\d|US\$\s*\d|\$\s*\d|precio\s*:?\s*\d|desde\s+s\/|entrada\s*:?\s*s\//
+const PAID_PATTERN = /\bs\/\.\s*\d|\bs\/\s*\d|US\$\s*\d|\$\s*\d|precio\s*:?\s*\d|desde\s+s\/|entrada\s*:?\s*s\//i
 
 const FREE_PATTERN =
   /entrada\s+(?:es\s+)?libre|ingreso\s+(?:es\s+)?libre|gratuit|gratis|acceso\s+(?:es\s+)?libre|sin\s+costo|libre\s+y\s+gratuito|\bfree\b|a\s+precio\s+de\s+0/

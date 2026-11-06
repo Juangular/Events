@@ -22,8 +22,15 @@ import { lumSource } from './sources/lum'
 import { mirafloresSource } from './sources/miraflores'
 import { municipalSources } from './sources/gobpe-municipal'
 import { sanIsidroSource } from './sources/san-isidro'
+import { granTeatroNacionalSource } from './sources/gran-teatro-nacional'
+import { entradaLibreSource } from './sources/entrada-libre'
+import { mallDelSurSource } from './sources/mall-del-sur'
+import { plazaNorteSource } from './sources/plaza-norte'
+import { running4PeruSource } from './sources/running4peru'
+import { vamosEventosSource } from './sources/vamos-eventos'
 
-const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, ipdAcademiaSource, sanIsidroSource, barrancoSource, mirafloresSource, ...municipalSources, eventbriteSource, lumSource]
+const ALL_SOURCES: SourceAdapter[] = [gobpeAgendaSource, ipdAcademiaSource, sanIsidroSource, barrancoSource, mirafloresSource, ...municipalSources, eventbriteSource, lumSource,
+  granTeatroNacionalSource, entradaLibreSource, mallDelSurSource, plazaNorteSource, running4PeruSource, vamosEventosSource]
 
 // Fuentes con caída permanente conocida: sus errores se reportan como
 // "degradada" sin fallar el workflow (evita avisos diarios repetidos).

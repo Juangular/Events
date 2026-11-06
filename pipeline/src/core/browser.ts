@@ -1,7 +1,7 @@
 import { chromium, type Browser, type BrowserContext } from 'playwright'
 
-const CHALLENGE_TITLE = /human verification|just a moment|attention required/i
-const CHALLENGE_BODY = /Human Verification|gokuProps|awsWafCookieDomainList/i
+const CHALLENGE_TITLE = /human verification|just a moment|attention required|robot challenge screen|vercel security checkpoint/i
+const CHALLENGE_BODY = /Human Verification|gokuProps|awsWafCookieDomainList|Vercel Security Checkpoint|Robot Challenge Screen|\.well-known\/sgcaptcha\/\?r=/i
 
 let browserPromise: Promise<Browser> | null = null
 let solvedContext: BrowserContext | null = null
@@ -15,6 +15,7 @@ async function getBrowser(): Promise<Browser> {
     browserPromise = chromium
       .launch({
         headless: true,
+        channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
         args: ['--disable-blink-features=AutomationControlled'],
       })
       .catch((error) => {
@@ -33,8 +34,9 @@ async function attemptFetch(context: BrowserContext, url: string): Promise<strin
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 })
     let cleared = false
     for (let i = 0; i < 8; i += 1) {
-      const title = await page.title()
-      if (!CHALLENGE_TITLE.test(title)) {
+      // A verification page can redirect while we inspect it; keep the same session alive.
+      const state = await page.evaluate<{ title: string; html: string; url: string }>('({ title: document.title, html: document.documentElement.outerHTML, url: location.href })').catch(() => null)
+      if (state?.title.trim() && !CHALLENGE_TITLE.test(state.title) && !CHALLENGE_BODY.test(state.html) && !state.url.includes('/.well-known/sgcaptcha/')) {
         cleared = true
         break
       }
@@ -53,12 +55,13 @@ async function attemptFetch(context: BrowserContext, url: string): Promise<strin
   }
 }
 
-export async function fetchHtmlViaBrowser(url: string): Promise<string> {
+export async function fetchHtmlViaBrowser(url: string, minIntervalMs = 0): Promise<string> {
   if (solvedContext) {
     const html = await attemptFetch(solvedContext, url)
     if (html) return html
     await solvedContext.close().catch(() => {})
     solvedContext = null
+    if (minIntervalMs) await sleep(minIntervalMs)
   }
 
   const browser = await getBrowser()
@@ -75,7 +78,7 @@ export async function fetchHtmlViaBrowser(url: string): Promise<string> {
     } finally {
       if (solvedContext !== context) await context.close().catch(() => {})
     }
-    if (attempt < 5) await sleep(2_000 * attempt)
+    if (attempt < 5) await sleep(Math.max(2_000 * attempt, minIntervalMs))
   }
   throw new Error(`Reto anti-bot no resuelto tras 5 intentos: ${url}`)
 }

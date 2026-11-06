@@ -14,7 +14,7 @@ const BROWSER_HEADERS: Record<string, string> = {
   'upgrade-insecure-requests': '1',
 }
 
-const CHALLENGE_PATTERN = /Human Verification|gokuProps|awsWafCookieDomainList/i
+const CHALLENGE_PATTERN = /Human Verification|gokuProps|awsWafCookieDomainList|Vercel Security Checkpoint|Robot Challenge Screen|\.well-known\/sgcaptcha\/\?r=/i
 
 const browserHosts = new Set<string>()
 
@@ -22,7 +22,7 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function fetchDirect(url: string, attempts = 2): Promise<string> {
+async function fetchDirect(url: string, attempts = 2, minIntervalMs = 0): Promise<string> {
   let lastError: unknown
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
@@ -42,22 +42,23 @@ async function fetchDirect(url: string, attempts = 2): Promise<string> {
       return html
     } catch (error) {
       lastError = error
-      if (attempt < attempts) await sleep(1_500 * attempt)
+      if (attempt < attempts) await sleep(Math.max(1_500 * attempt, minIntervalMs))
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
-export async function fetchHtml(url: string, options: { browserFallback?: boolean } = {}): Promise<string> {
+export async function fetchHtml(url: string, options: { browserFallback?: boolean; minIntervalMs?: number } = {}): Promise<string> {
   const host = new URL(url).hostname
-  if (options.browserFallback && browserHosts.has(host)) return fetchHtmlViaBrowser(url)
+  if (options.browserFallback && browserHosts.has(host)) return fetchHtmlViaBrowser(url, options.minIntervalMs)
 
   try {
-    return await fetchDirect(url)
+    return await fetchDirect(url, 2, options.minIntervalMs)
   } catch (directError) {
     if (!options.browserFallback) throw directError
     try {
-      const html = await fetchHtmlViaBrowser(url)
+      if (options.minIntervalMs) await sleep(options.minIntervalMs)
+      const html = await fetchHtmlViaBrowser(url, options.minIntervalMs)
       browserHosts.add(host)
       return html
     } catch (browserError) {
