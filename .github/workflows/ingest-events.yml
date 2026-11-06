@@ -3,7 +3,12 @@ name: Ingest eventos gratuitos Lima
 on:
   schedule:
     - cron: '0 11 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Fuente específica para comprobar (vacío = todas)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -40,8 +45,14 @@ jobs:
         run: npm test
 
       - name: Ingest
-        run: npm run ingest
+        run: |
+          if [ -n "$SOURCE_FILTER" ]; then
+            npm run ingest -- --source "$SOURCE_FILTER"
+          else
+            npm run ingest
+          fi
         env:
+          SOURCE_FILTER: ${{ inputs.source }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PUBLISH_MODE: ${{ vars.PUBLISH_MODE }}

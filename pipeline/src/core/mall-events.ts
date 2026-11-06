@@ -89,7 +89,7 @@ export function parseMallEvent(html: string, url: string, config: MallConfig): C
 
 export function mallSource(config: MallConfig): SourceAdapter {
   return { key: config.key, label: `${config.name} — eventos gratuitos`, collect: () => collectPages({
-    key: config.key, url: `${config.base}/eventos/`, listing: mallListing,
+    key: config.key, url: `${config.base}/eventos/`, listing: mallListing, browserFallback: true,
     detail: (html, url) => parseMallEvent(html, url, config),
   }) }
 }

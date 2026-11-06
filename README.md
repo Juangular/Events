@@ -81,7 +81,7 @@ Fuentes actuales:
 - **Running4Peru** (`running4peru`): `https://www.running4peru.com/eventos`. Solo fichas gratuitas de Lima, dentro de un horizonte de 90 días, con pausa de 10 segundos entre consultas y navegador de respaldo si encuentra una pantalla de verificación. Los datos agregados quedan en revisión.
 - **Vamos Eventos** (`vamos-eventos`): `https://www.vamoseventos.com/lima/gratis`. Excluye las recomendaciones de pago del listado y extrae la descripción principal de cada evento, no sus anuncios. Guarda la publicación original cuando aparece en `raw.originalUrl`; los candidatos quedan en revisión. El proveedor publica restricciones de extracción automatizada en sus términos: esta integración técnica no otorga derechos de reutilización.
 
-Hay 17 adaptadores registrados. El workflow instala Chromium para el fallback anti-bot de Eventbrite, Running4Peru y Vamos. Las fuentes oficiales siguen por HTTP y funcionan aunque el navegador no esté disponible. Para desarrollo local se puede usar Chrome ya instalado con `PLAYWRIGHT_CHANNEL=chrome`; en CI se utiliza Chromium por defecto. Un desafío no resuelto se reporta como error, nunca como una agenda vacía.
+Hay 17 adaptadores registrados. Todos intentan primero la lectura HTTP; Eventbrite, Running4Peru, Vamos y los dos malls pueden usar Chromium si encuentran un bloqueo. El resto de fuentes oficiales no depende del navegador. Para desarrollo local se puede usar Chrome ya instalado con `PLAYWRIGHT_CHANNEL=chrome`; en CI se utiliza Chromium por defecto. Un desafío no resuelto se reporta como error, nunca como una agenda vacía. Que una fuente funcione desde una conexión local no garantiza que admita las IP de GitHub Actions.
 
 Las nuevas fuentes tienen límites de 20 páginas y 500 fichas por ejecución, enlaces restringidos al mismo dominio y fallos de estructura visibles. Las fichas sin fecha verificable o con inscripción obligatoria sin enlace se omiten: el esquema exige esos datos y no se inventan. Los horarios ambiguos o recurrencias no interpretadas quedan como `draft`. EntradaLibre, Running4Peru y Vamos conservan `needsReview = true` incluso en modo `auto`: antes de aprobar, verificar gratuidad, organizador, distrito y publicación original, y actualizar `source_url` a la fuente oficial confirmada.
 
@@ -116,6 +116,8 @@ npm run ingest:dry
 ```
 
 Para validar una sola fuente sin escribir: `npm run ingest:dry -- --source plaza-norte` (sustituir por cualquiera de las claves anteriores). Las pruebas cubren paginación y dominios permitidos, precios positivos o mixtos, compras obligatorias, distritos, horarios recurrentes, selección del evento principal frente a recomendaciones y enlaces de inscripción pendientes. El cron continúa diario a las 06:00 de Lima; un push publica el código en Vercel, pero la ingesta necesita el cron o una ejecución manual de Actions para añadir los registros a Supabase.
+
+En *Run workflow*, el campo opcional `source` permite ejecutar una sola fuente con los secretos de GitHub (por ejemplo, `plaza-norte`). Dejarlo vacío ejecuta todas. El cron siempre consulta todas las fuentes; este filtro manual sirve para diagnosticar bloqueos o validar un adaptador sin repetir toda la corrida.
 
 Agregar una fuente nueva consiste en crear un adaptador en `pipeline/src/sources/` con la interfaz `SourceAdapter` y registrarlo en `pipeline/src/index.ts`. Si un sitio cambia de diseño, el adaptador falla de forma aislada: el error queda en `sync_runs` y las demás fuentes siguen funcionando.
 
