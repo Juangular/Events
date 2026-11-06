@@ -2,8 +2,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { CandidateEvent, RunCounters } from './types'
 import { fingerprint } from './core/text'
 
-export type PublishMode = 'auto' | 'review'
-
 export interface EventInsert {
   title: string
   description: string
@@ -41,18 +39,6 @@ export function createAdminClient(): SupabaseClient {
   return createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   })
-}
-
-export async function getPublishMode(client: SupabaseClient): Promise<PublishMode> {
-  const envMode = process.env.PUBLISH_MODE?.trim().toLowerCase()
-  if (envMode === 'auto' || envMode === 'review') return envMode
-
-  const { data, error } = await client.from('automation_settings').select('value').eq('key', 'publish_mode').maybeSingle()
-  if (error) {
-    console.warn('[db] No se pudo leer automation_settings, se usa modo auto:', error.message)
-    return 'auto'
-  }
-  return data?.value === 'review' ? 'review' : 'auto'
 }
 
 export async function existingFingerprints(client: SupabaseClient): Promise<Set<string>> {

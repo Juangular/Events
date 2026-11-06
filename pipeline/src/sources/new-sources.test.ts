@@ -25,12 +25,13 @@ test('JSON-LD accepts graphs and arrays, and selects the principal event rather 
   assert.throws(() => mainEvent('<h1>Página cambiada</h1>', url), /no reconocida/)
 })
 
-test('aggregated candidates stay in review and preserve dates, times and district', () => {
+test('aggregated candidates preserve dates, times and district without a review requirement', () => {
   const candidate = parseEntradaLibreEvent(schema(event), url)[0]!
   assert.equal(candidate.district, 'Miraflores')
+  assert.equal(candidate.category, 'Tecnología')
   assert.equal(candidate.time, '11:00 a. m. – 12:00 p. m.')
   assert.equal(candidate.endDate, undefined)
-  assert.equal(candidate.needsReview, true)
+  assert.deepEqual(candidate.qualityIssues, [])
   assert.deepEqual(runGates(candidate, '2026-11-06').reject, [])
 })
 
@@ -58,6 +59,9 @@ test('unpublished registration links are not invented', () => {
   const required = { ...event, description: 'Ingreso gratuito, previa inscripción: pronto.' }
   assert.equal(structuredCandidate(required, { source: 'Prueba', url }), null)
   assert.equal(structuredCandidate(required, { source: 'Prueba', url, registrationUrl: 'https://forms.gle/registro' })?.requiresRegistration, true)
+  const visibleRegistration = `${schema(event)}<article class="elfi-cab"><span>Con inscripción</span><a href="https://forms.gle/registro">Inscribirme</a></article>`
+  assert.equal(parseEntradaLibreEvent(visibleRegistration, url)[0]?.requiresRegistration, true)
+  assert.equal(parseEntradaLibreEvent(`${schema(event)}<article class="elfi-cab">Con inscripción</article>`, url).length, 0)
 })
 
 test('discovered URLs cannot leave the configured origin or event paths', () => {
@@ -82,7 +86,7 @@ test('Vamos ignores paid affiliate cards and uses the event description, not rec
   const node = { ...event, url: detail, offers: undefined, isAccessibleForFree: undefined }
   const candidate = parseVamosEvent(`${schema(node)}<div class="whitespace-pre-wrap">Ingreso libre en mezanine, sujeto a capacidad.</div><aside>Publicidad desde S/45</aside>`, detail)[0]!
   assert.equal(candidate.freeSignal, true)
-  assert.equal(candidate.needsReview, true)
+  assert.deepEqual(candidate.qualityIssues, [])
   assert.match(candidate.description, /mezanine/)
   assert.deepEqual(parseVamosEvent('<h1>Noticia sin fecha</h1><div class="whitespace-pre-wrap">Actividad sin fecha publicada.</div>', detail), [])
 })
@@ -108,7 +112,7 @@ test('mall events use activity dates (not post publication) and real lazy image 
   assert.equal(candidate.startDate, '2026-11-07')
   assert.equal(candidate.district, 'San Juan de Miraflores')
   assert.equal(candidate.imageUrl, 'https://malldelsur.pe/cartel.jpg')
-  assert.equal(candidate.needsReview, false)
+  assert.deepEqual(candidate.qualityIssues, [])
   assert.deepEqual(runGates(candidate, '2026-11-06').reject, [])
   assert.equal(parseMallEvent(mallHtml('Caritas gratis por compras mínimas de S/50.'), `${mall.base}/eventos/show/`, mall).length, 0)
 })
@@ -125,7 +129,7 @@ test('weekly activities expand only the actual weekdays and their stated hours',
   assert.deepEqual(occurrences[0], { date: '2026-11-01', time: '5:00 p. m.' })
   assert.equal(weeklyOccurrences('2026-11-01', '2026-11-30', 'Todos los miércoles y viernes.', '6:00 p. m.').length, 8)
   const ambiguous = parseMallEvent(mallHtml('De jueves a martes, horarios variables.', '1 de noviembre de 2026 - 30 de noviembre de 2026'), `${mall.base}/eventos/show/`, mall)[0]!
-  assert.equal(ambiguous.needsReview, true)
+  assert.deepEqual(ambiguous.qualityIssues, ['schedule:ambiguous'])
 })
 
 test('GTN uses the human-readable performance time and excludes pending registrations', () => {

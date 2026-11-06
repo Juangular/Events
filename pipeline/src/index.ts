@@ -2,17 +2,15 @@ import { parseArgs } from 'node:util'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CandidateEvent, RunCounters, SourceAdapter } from './types'
 import { closeBrowser } from './core/browser'
-import { runGates } from './core/gates'
+import { publicationDecision } from './core/publication'
 import { fingerprint } from './core/text'
 import {
   createAdminClient,
   existingFingerprints,
-  getPublishMode,
   insertEvents,
   recordSyncRun,
   toEventInsert,
   type EventInsert,
-  type PublishMode,
 } from './db'
 import { barrancoSource } from './sources/barranco'
 import { eventbriteSource } from './sources/eventbrite'
@@ -42,7 +40,6 @@ function emptyCounters(): RunCounters {
 
 async function runSource(
   adapter: SourceAdapter,
-  publishMode: PublishMode,
   known: Set<string>,
   client: SupabaseClient | null,
   dryRun: boolean,
@@ -57,23 +54,21 @@ async function runSource(
 
     const rows: EventInsert[] = []
     for (const candidate of candidates) {
-      const gates = runGates(candidate)
-      if (gates.reject.length > 0) {
+      const decision = publicationDecision(candidate)
+      if (decision.status === 'rejected') {
         counters.rejected += 1
-        if (dryRun) console.log(`  descartado: ${candidate.title.slice(0, 60)} → ${gates.reject.join(', ')}`)
+        if (dryRun) console.log(`  descartado: ${candidate.title.slice(0, 60)} → ${decision.reasons.join(', ')}`)
         continue
       }
 
-      const status = publishMode === 'auto' && gates.demote.length === 0 && !candidate.needsReview ? 'published' : 'draft'
-      const row = toEventInsert(candidate, adapter.key, status)
+      const row = toEventInsert(candidate, adapter.key, 'published')
       if (known.has(row.fingerprint)) {
         counters.skippedDupes += 1
         continue
       }
       known.add(row.fingerprint)
       rows.push(row)
-      if (status === 'published') counters.published += 1
-      else counters.drafted += 1
+      counters.published += 1
     }
     counters.insertable = rows.length
 
@@ -130,18 +125,14 @@ async function main(): Promise<void> {
   let client: SupabaseClient | null = null
   if (!dryRun) client = createAdminClient()
 
-  const publishMode: PublishMode = client
-    ? await getPublishMode(client)
-    : ((process.env.PUBLISH_MODE as PublishMode | undefined) === 'review' ? 'review' : 'auto')
-
-  console.log(`Modo de publicación: ${publishMode}${dryRun ? ' (dry-run: sin escritura)' : ''}`)
+  console.log(`Publicación automática de todos los candidatos válidos${dryRun ? ' (dry-run: sin escritura)' : ''}`)
 
   const known = client ? await existingFingerprints(client) : new Set<string>()
   const totals = emptyCounters()
   const results: Array<{ source: SourceAdapter; counters: RunCounters }> = []
 
   for (const adapter of sources) {
-    const counters = await runSource(adapter, publishMode, known, client, dryRun)
+    const counters = await runSource(adapter, known, client, dryRun)
     results.push({ source: adapter, counters })
     totals.fetched += counters.fetched
     totals.published += counters.published

@@ -70,40 +70,45 @@ Fuentes actuales:
 - **Municipalidad de San Isidro**: campañas con fecha, lugar, horario, gratuidad explícita e imagen oficial. Se descartan avisos administrativos, actividades con costo y eventos finalizados.
 - **Municipalidad de Barranco**: actividades recurrentes publicadas recientemente, con gratuidad, horario y lugar verificables. Solo se proyectan dentro de la semana actual y se revalidan en cada corrida.
 - **Municipalidad Metropolitana de Lima**: noticias oficiales con fecha, hora, lugar y gratuidad explícita.
-- **Santiago de Surco**: eventos oficiales con gratuidad verificable. Si la fuente no publica fecha de inicio u horario, el registro queda como `draft` para revisión en lugar de inventar datos.
+- **Santiago de Surco**: eventos oficiales con gratuidad verificable. Si la fuente no publica fecha de inicio u horario, se omiten en lugar de inventar datos.
 - **San Miguel y Pueblo Libre**: se consultan campañas y noticias oficiales; solo se incorporan cuando contienen datos completos y vigentes. Actualmente no hay eventos futuros que cumplan ese requisito.
 - **Miraflores**: la agenda oficial `eventos-municipales` se procesa con los eventos disponibles, incluidos los antiguos, para validar la estructura de parsing (JSON-LD de cada página de evento). Los eventos pasados se descartan por fecha y no se publican; cuando la municipalidad publique eventos nuevos con la misma estructura, entrarán automáticamente. Si la estructura cambiara, la corrida fallaría como error de estructura en lugar de ignorarlo en silencio.
 - **Lugar de la Memoria (LUM)**: agenda mensual de actividades con ingreso libre y gratuito.
 - **Gran Teatro Nacional** (`gran-teatro-nacional`): `https://granteatronacional.pe/eventos`, San Borja. Usa fecha y horario del texto de la función, no el enlace de calendario cuando es inconsistente. Si exige inscripción y todavía dice `[pronto]`, se omite hasta que publique un enlace real. No se extraen sus imágenes `/sites/*`, restringidas en robots.txt.
 - **Mall del Sur** (`mall-del-sur`): `https://malldelsur.pe/eventos/`, San Juan de Miraflores. Recorre la paginación y descarta promociones que exigen compras o consumo mínimo, aunque digan «gratis». Las recurrencias explícitas generan fechas solo para los días indicados.
 - **Plaza Norte** (`plaza-norte`): `https://plazanorte.pe/eventos/`, Independencia. Procesa las fichas oficiales etiquetadas como gratuitas, con fecha, horario y recinto; comparte el parser de Events Manager con Mall del Sur.
-- **EntradaLibre** (`entrada-libre`): `https://entradalibre.me/eventos/`. Recorre el listado nacional paginado, selecciona distritos de Lima y extrae el `Event` JSON-LD de cada ficha. Sus candidatos entran como `draft` para verificar la publicación original del organizador.
-- **Running4Peru** (`running4peru`): `https://www.running4peru.com/eventos`. Solo fichas gratuitas de Lima, dentro de un horizonte de 90 días, con pausa de 10 segundos entre consultas y navegador de respaldo si encuentra una pantalla de verificación. Los datos agregados quedan en revisión.
-- **Vamos Eventos** (`vamos-eventos`): `https://www.vamoseventos.com/lima/gratis`. Excluye las recomendaciones de pago del listado y extrae la descripción principal de cada evento, no sus anuncios. Guarda la publicación original cuando aparece en `raw.originalUrl`; los candidatos quedan en revisión. El proveedor publica restricciones de extracción automatizada en sus términos: esta integración técnica no otorga derechos de reutilización.
+- **EntradaLibre** (`entrada-libre`): `https://entradalibre.me/eventos/`. Recorre el listado nacional paginado, selecciona distritos de Lima y extrae el `Event` JSON-LD de cada ficha. Publica directamente los candidatos válidos y reconoce la etiqueta de inscripción y su enlace real.
+- **Running4Peru** (`running4peru`): `https://www.running4peru.com/eventos`. Solo fichas gratuitas de Lima, dentro de un horizonte de 90 días, con pausa de 10 segundos entre consultas y navegador de respaldo si encuentra una pantalla de verificación. Publica automáticamente los candidatos válidos.
+- **Vamos Eventos** (`vamos-eventos`): `https://www.vamoseventos.com/lima/gratis`. Excluye las recomendaciones de pago del listado y extrae la descripción principal de cada evento, no sus anuncios. Guarda la publicación original cuando aparece en `raw.originalUrl` y publica los candidatos válidos. El proveedor publica restricciones de extracción automatizada en sus términos: esta integración técnica no otorga derechos de reutilización.
 
 Hay 17 adaptadores registrados. Todos intentan primero la lectura HTTP; Eventbrite, Running4Peru, Vamos y los dos malls pueden usar Chromium si encuentran un bloqueo. El resto de fuentes oficiales no depende del navegador. Para desarrollo local se puede usar Chrome ya instalado con `PLAYWRIGHT_CHANNEL=chrome`; en CI se utiliza Chromium por defecto. Un desafío no resuelto se reporta como error, nunca como una agenda vacía. Que una fuente funcione desde una conexión local no garantiza que admita las IP de GitHub Actions.
 
-Las nuevas fuentes tienen límites de 20 páginas y 500 fichas por ejecución, enlaces restringidos al mismo dominio y fallos de estructura visibles. Las fichas sin fecha verificable o con inscripción obligatoria sin enlace se omiten: el esquema exige esos datos y no se inventan. Los horarios ambiguos o recurrencias no interpretadas quedan como `draft`. EntradaLibre, Running4Peru y Vamos conservan `needsReview = true` incluso en modo `auto`: antes de aprobar, verificar gratuidad, organizador, distrito y publicación original, y actualizar `source_url` a la fuente oficial confirmada.
+Las nuevas fuentes tienen límites de 20 páginas y 500 fichas por ejecución, enlaces restringidos al mismo dominio y fallos de estructura visibles. Las fichas sin fecha verificable o con inscripción obligatoria sin enlace se omiten: el esquema exige esos datos y no se inventan. Las incertidumbres reales de datos se señalan con `qualityIssues`: horarios ausentes, fechas inferidas o recurrencias no interpretadas impiden publicar ese candidato. No se crean nuevos borradores para resolver esos casos.
 
 Cuando un evento no tiene `image_url`, la interfaz busca una imagen relacionada con el título dentro de su categoría y, si no encuentra coincidencia, usa la imagen general de la categoría. Tarjetas y modal comparten el fallback de imagen propia a imagen por título y finalmente por categoría, sin reintentos en bucle. Las imágenes manuales en Supabase no se modifican con las corridas del pipeline.
 
 Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar). Los registros automáticos llevan `origin = 'auto'` y `source_key`; RLS muestra solo eventos publicados, gratuitos y de Lima, y la interfaz organiza las fechas actuales, futuras y de archivo.
 
-### Modo de publicación
+### Publicación directa
 
-La fila `publish_mode` de la tabla `automation_settings` controla el flujo:
+Por petición de Juan, **todos los candidatos válidos de todas las fuentes se publican directamente** (`status = 'published'`), incluidos EntradaLibre, Running4Peru y Vamos. No hay modo de revisión ni excepciones por ser un agregador.
 
-- `auto`: los candidatos que pasan todos los filtros se publican directamente (`status = 'published'`); los que fallan un filtro suave quedan como `draft` para inspección.
-- `review`: todo entra como `draft` y se aprueba manualmente desde `Supabase > Table Editor > events` (cambiar `status` a `published`).
+`pipeline/src/core/publication.ts` unifica la decisión: publicar o descartar. Se mantienen los controles de gratuidad, Lima, vigencia, URLs, datos imprescindibles e inscripción. Los candidatos inválidos no se convierten en borradores ni se publican con datos inventados. Los duplicados siguen omitiéndose y no se sobrescriben registros existentes.
 
-Se cambia editando esa fila en Supabase; el pipeline la lee en cada corrida. La variable `PUBLISH_MODE` (`auto` o `review`) en el workflow la sobreescribe temporalmente.
+El pipeline ya no lee `PUBLISH_MODE` ni `automation_settings.publish_mode`. La tabla histórica se conserva para compatibilidad, pero cambiar esa fila no reactiva un modo de revisión. Los borradores antiguos no se promocionan por este cambio; la aprobación puntual de 205 registros fue una operación separada.
+
+### Categorías y orden del listado
+
+La clasificación usa primero señales específicas del título y después la taxonomía de la fuente. «IV Feria del Libro» pertenece a Cultura; la palabra «feria» por sí sola no significa Gastronomía. Los talleres de robótica pertenecen a Tecnología y las clases de yoga a Deportes, antes de considerar el formato genérico «taller». No se usan textos incidentales de la descripción o del recinto para sobreescribir el tema principal.
+
+El listado de eventos se ordena por defecto por **Nombre: A–Z**, con comparación española que contempla mayúsculas y tildes. El selector **Ordenar por** sustituye a Modalidad y ofrece nombre A–Z/Z–A, fecha ascendente/descendente, categoría A–Z y distrito A–Z. El orden se aplica al conjunto filtrado antes de paginar; cambiarlo vuelve a la primera página. La modalidad sigue visible en las tarjetas y el detalle. Pruebas: `node --test scripts/test-event-sort.mjs` y `npm test` dentro de `pipeline/`.
 
 ### Configurar la automatización
 
 1. Ejecutar `supabase/schema.sql` (añade columnas de automatización, `automation_settings` y `sync_runs`).
 2. En GitHub del repositorio: *Settings > Secrets and variables > Actions*.
 3. Crear los secrets `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (la clave `service_role` solo vive aquí; nunca en Vercel, el repositorio ni `.env.local`).
-4. Opcional: crear la variable `PUBLISH_MODE` para forzar un modo sin tocar la base de datos.
+4. No es necesario configurar una variable de modo de publicación: la publicación es directa para todos los candidatos válidos.
 
 Cada corrida deja un registro en `sync_runs` (obtenidos, publicados, borradores, duplicados, descartados y errores) para verificar la salud del pipeline. El workflow también escribe un resumen por fuente en la página de la corrida (pestaña *Summary*). **Solo se notifica cuando hay errores** (el workflow queda en rojo y GitHub envía la alerta de workflow fallido); cuando simplemente no hay eventos nuevos, la corrida queda en verde y no avisa. Las caídas permanentes conocidas —actualmente Eventbrite, bloqueado por su WAF— se listan como "degradadas" sin provocar alertas; la lista `KNOWN_OUTAGE_SOURCES` en `pipeline/src/index.ts` controla esa excepción. Para probar sin escribir nada:
 

@@ -106,17 +106,19 @@ export function structuredCandidate(event: Record<string, unknown>, options: {
   const district = findLimaDistrict(`${locality} ${text(address.streetAddress)} ${text(location.name)}`)
   const requiresRegistration = /previa inscrip|registro previo|para inscribirte|inscripcion obligatoria|requiere inscripcion/.test(normalizeText(description))
   if (requiresRegistration && !options.registrationUrl) return null
+  const modality = /OnlineEventAttendanceMode/.test(text(event.eventAttendanceMode)) ? 'Virtual' : 'Presencial'
+  const place = text(location.name) || text(address.streetAddress) || (modality === 'Virtual' ? 'Sesión virtual' : 'Consultar lugar')
+  const time = timeRangeFromIso(startIso, endIso)
+  const endDate = dateFromIso(endIso)
   return {
     title, description: firstSentence(description, 2400), category: classifyCategory(title, options.fallbackCategory ?? 'Cultura'),
-    modality: /OnlineEventAttendanceMode/.test(text(event.eventAttendanceMode)) ? 'Virtual' : 'Presencial',
-    startDate, endDate: dateFromIso(endIso) && dateFromIso(endIso) !== startDate ? dateFromIso(endIso)! : undefined, time: timeRangeFromIso(startIso, endIso),
-    place: text(location.name) || text(address.streetAddress) || 'Consultar lugar', district,
+    modality, startDate, endDate: endDate && endDate !== startDate ? endDate : undefined, time, place, district,
     organizer: text(object(event.organizer).name) || options.source, source: options.source, sourceUrl: options.url,
     requiresRegistration, registrationUrl: options.registrationUrl, tags: [],
     imageUrl: isValidHttpsUrl(text(event.image)) ? text(event.image) : undefined,
     freeSignal, priceRaw: options.priceText || (prices.length ? 'Gratis (precio publicado: 0)' : undefined),
-    // Aggregated metadata is a discovery lead, not a verified organizer announcement.
-    needsReview: true, raw: { scrapedUrl: options.url, provenance: 'aggregator', startDate: startIso, endDate: endIso, priceText },
+    qualityIssues: [...(time === 'Consultar horario' ? ['time:missing'] : []), ...(modality === 'Presencial' && place === 'Consultar lugar' ? ['place:missing'] : [])],
+    raw: { scrapedUrl: options.url, provenance: 'aggregator', startDate: startIso, endDate: endIso, priceText },
   }
 }
 

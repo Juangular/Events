@@ -38,10 +38,10 @@ export function parseGtnEvent(html: string, url: string): CandidateEvent[] {
   }
   return [{
     title: subtitle ? `${title}: ${subtitle}` : title, description: firstSentence(description, 2400),
-    category: classifyCategory(`${title} ${subtitle} ${description}`, 'Cultura'), modality: 'Presencial', startDate,
+    category: classifyCategory(`${title} ${subtitle}`, 'Cultura'), modality: 'Presencial', startDate,
     time: time || 'Consultar horario', place: 'Gran Teatro Nacional', district: 'San Borja',
     organizer: 'Gran Teatro Nacional — Ministerio de Cultura', source: 'Gran Teatro Nacional', sourceUrl: url,
-    requiresRegistration, registrationUrl, tags: [], freeSignal: true, priceRaw: description, needsReview: !time,
+    requiresRegistration, registrationUrl, tags: [], freeSignal: true, priceRaw: description, qualityIssues: time ? [] : ['time:missing'],
     // /sites/* images are disallowed by this site's robots.txt; use the frontend fallback.
     raw: { source: 'gran-teatro-nacional', url, date: root.find('.infechas').text().trim() },
   }]

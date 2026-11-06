@@ -55,4 +55,3 @@ jobs:
           SOURCE_FILTER: ${{ inputs.source }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          PUBLISH_MODE: ${{ vars.PUBLISH_MODE }}

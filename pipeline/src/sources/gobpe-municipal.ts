@@ -214,7 +214,7 @@ function createMunicipalSource(config: MunicipalConfig): SourceAdapter {
         const time = parseTime(`${abstract} ${bodyText}`)
         const registration = registrationUrl($)
         const image = $('img.feed-cover-img, img.campaign-cover-img').first().attr('src')
-        const needsReview = dates.inferredStart || time.inferred
+        const qualityIssues = [...(dates.inferredStart ? ['date:inferred'] : []), ...(time.inferred ? ['time:missing'] : [])]
         const description = firstSentence(
           `${bodyText || abstract}${dates.inferredStart ? ' La fuente no indica fecha de inicio; se muestra desde la publicación de la nota hasta el cierre informado.' : ''}`,
           1000,
@@ -223,7 +223,7 @@ function createMunicipalSource(config: MunicipalConfig): SourceAdapter {
         candidates.push({
           title,
           description,
-          category: classifyCategory(fullText, config.fallbackCategory),
+          category: classifyCategory(title, config.fallbackCategory),
           modality: 'Presencial',
           startDate: dates.start,
           endDate: dates.end && dates.end !== dates.start ? dates.end : undefined,
@@ -235,7 +235,7 @@ function createMunicipalSource(config: MunicipalConfig): SourceAdapter {
           sourceUrl: url,
           registrationUrl: registration,
           requiresRegistration: Boolean(registration),
-          needsReview,
+          qualityIssues,
           tags: [],
           imageUrl: image && isValidHttpsUrl(image) ? image : undefined,
           freeSignal: true,

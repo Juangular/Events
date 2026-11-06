@@ -80,11 +80,11 @@ export function parseMallEvent(html: string, url: string, config: MallConfig): C
     place: venue ? `${config.name} — ${venue}` : config.name, district: config.district,
     organizer: config.name, source: config.name, sourceUrl: url, requiresRegistration, registrationUrl, tags: [],
     imageUrl: imageUrl && isValidHttpsUrl(imageUrl) ? imageUrl : undefined, freeSignal: true, priceRaw: priceText,
-    needsReview: !clocks.length || (start !== end && !occurrences.length && !/todos los d[ií]as|diari[oa]/i.test(description)),
+    qualityIssues: [...(!clocks.length ? ['time:missing'] : []), ...(start !== end && !occurrences.length && !/todos los d[ií]as|diari[oa]/i.test(description) ? ['schedule:ambiguous'] : [])],
     raw: { source: config.key, url, date: root.find('.em-event-date').text().trim(), schedule: description },
   }
   if (!occurrences.length) return [candidate]
-  return occurrences.map(({ date, time: occurrenceTime }) => ({ ...candidate, startDate: date, endDate: undefined, time: occurrenceTime, needsReview: !clocks.length }))
+  return occurrences.map(({ date, time: occurrenceTime }) => ({ ...candidate, startDate: date, endDate: undefined, time: occurrenceTime, qualityIssues: occurrenceTime === 'Consultar horario' ? ['time:missing'] : [] }))
 }
 
 export function mallSource(config: MallConfig): SourceAdapter {

@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio'
 import type { CandidateEvent, SourceAdapter } from '../types'
 import { findLimaDistrict } from '../core/gates'
+import { classifySourceTaxonomy } from '../core/category'
 import { collectPages, mainEvent, pageText, registrationLink, sameSiteUrl, structuredCandidate, type ListingPage } from '../core/source-page'
 
 export function entradaLibreListing(html: string, url: string): ListingPage {
@@ -26,12 +27,19 @@ export function entradaLibreListing(html: string, url: string): ListingPage {
 export function parseEntradaLibreEvent(html: string, url: string): CandidateEvent[] {
   const $ = cheerio.load(html)
   const event = mainEvent(html, url)
+  const root = $('article.elfi-cab').first()
+  const taxonomy = root.find('a[href*="/event_cat/"]').map((_, el) => $(el).text()).get()
+  const registrationUrl = registrationLink(root.html() ?? '', url)
   const candidate = structuredCandidate(event, { source: 'EntradaLibre', url,
-    registrationUrl: registrationLink($('article.elfi-cab').html() ?? '', url) })
+    fallbackCategory: taxonomy.length ? classifySourceTaxonomy(taxonomy) : 'Cultura', registrationUrl })
+  if (candidate && /con inscripci[oó]n|inscripci[oó]n obligatoria|registro previo/i.test(root.text())) {
+    if (!registrationUrl) return []
+    candidate.requiresRegistration = true
+  }
   return candidate ? [candidate] : []
 }
 
 export const entradaLibreSource: SourceAdapter = {
-  key: 'entrada-libre', label: 'EntradaLibre — agenda cultural (revisión de fuente original)',
+  key: 'entrada-libre', label: 'EntradaLibre — agenda cultural gratuita',
   collect: () => collectPages({ key: 'entrada-libre', url: 'https://entradalibre.me/eventos/', listing: entradaLibreListing, detail: parseEntradaLibreEvent }),
 }

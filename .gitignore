@@ -7,3 +7,4 @@ dist/
 .DS_Store
 public/sitemap.xml
 .playwright-mcp/
+**/supabase/.temp/

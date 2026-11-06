@@ -95,7 +95,7 @@ export const sanIsidroSource: SourceAdapter = {
       candidates.push({
         title,
         description: firstSentence(bodyText || `${title} en ${place}.`, 1000),
-        category: classifyCategory(fullText, 'Cultura'),
+        category: classifyCategory(title, 'Cultura'),
         modality: 'Presencial',
         startDate: dates.start,
         endDate: dates.end && dates.end !== dates.start ? dates.end : undefined,

@@ -149,7 +149,7 @@ export const mirafloresSource: SourceAdapter = {
       candidates.push({
         title,
         description: firstSentence(bodyText || event?.description || `${title}, evento de la Municipalidad de Miraflores.`, 1000),
-        category: classifyCategory(fullText, 'Cultura'),
+        category: classifyCategory(title, 'Cultura'),
         modality: 'Presencial',
         startDate,
         endDate: endDate && endDate !== startDate ? endDate : undefined,
@@ -161,7 +161,7 @@ export const mirafloresSource: SourceAdapter = {
         sourceUrl: url,
         registrationUrl: registration && isValidHttpsUrl(registration) ? registration : undefined,
         requiresRegistration: Boolean(registration),
-        needsReview: !parsedPlace,
+        qualityIssues: parsedPlace ? [] : ['place:missing'],
         tags: [],
         freeSignal: true,
         priceRaw: 'Gratis',

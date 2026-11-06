@@ -29,7 +29,7 @@ export interface CandidateEvent {
   imageUrl?: string
   freeSignal: boolean
   priceRaw?: string
-  needsReview?: boolean
+  qualityIssues?: string[]
   raw: unknown
 }
 

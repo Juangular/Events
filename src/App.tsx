@@ -7,6 +7,8 @@ import { getPublicPlaces } from './lib/places'
 import { getPagination } from './lib/pagination'
 import { getEventView, matchesEventView } from './lib/event-view'
 import type { EventScope } from './lib/event-view'
+import { eventSortOptions, sortEvents } from './lib/event-sort'
+import type { EventSort } from './lib/event-sort'
 import { useDialogLifecycle } from './hooks/useDialogLifecycle'
 import type { EventItem, PlaceItem } from './types'
 
@@ -55,7 +57,7 @@ function App() {
   const [placesLoading, setPlacesLoading] = useState(true)
   const [placesError, setPlacesError] = useState<string | null>(null)
   const [category, setCategory] = useState<(typeof categories)[number]>('Todas')
-  const [modality, setModality] = useState('Todas')
+  const [sortOrder, setSortOrder] = useState<EventSort>('name-asc')
   const [district, setDistrict] = useState('')
   const [scope, setScope] = useState<EventScope>('disponibles')
   const [query, setQuery] = useState('')
@@ -117,17 +119,16 @@ function App() {
   const districts = useMemo(() => [...new Set(events.flatMap((event) => event.district ? [event.district] : []))].sort((a, b) => a.localeCompare(b, 'es')), [events])
   const eventView = getEventView(month, year, today, scope)
 
-  const filtered = useMemo(() => events.filter((event) => {
+  const filtered = useMemo(() => sortEvents(events.filter((event) => {
     const matchesMonth = overlapsMonth(event, month, year)
     const eventEnd = event.endDate ?? event.startDate
     const matchesScope = matchesEventView(eventView, eventEnd, today)
     const matchesCategory = category === 'Todas' || event.category === category
-    const matchesModality = modality === 'Todas' || event.modality === modality
     const matchesDistrict = !district || event.district === district
     const search = debouncedQuery.toLowerCase()
     const matchesQuery = !search || `${event.title} ${event.description} ${event.place} ${event.category}`.toLowerCase().includes(search)
-    return matchesMonth && matchesScope && matchesCategory && matchesModality && matchesDistrict && matchesQuery
-  }).sort((a, b) => a.startDate.localeCompare(b.startDate)), [events, month, year, eventView, today, category, modality, district, debouncedQuery])
+    return matchesMonth && matchesScope && matchesCategory && matchesDistrict && matchesQuery
+  }), sortOrder), [events, month, year, eventView, today, category, sortOrder, district, debouncedQuery])
 
   const shiftMonth = (direction: number) => {
     const next = new Date(year, month + direction, 1)
@@ -185,7 +186,7 @@ function App() {
               <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)}><ChevronRight size={17} /></button></div>
              <label className="select-filter"><span>Categoría</span><select value={category} onChange={(event) => { setCategory(event.target.value as typeof category); setEventPage(1) }}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
              <label className="select-filter"><span>Distrito</span><select value={district} onChange={(event) => { setDistrict(event.target.value); setEventPage(1) }}><option value="">Todos los distritos</option>{districts.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-             <label className="select-filter"><span>Modalidad</span><select value={modality} onChange={(event) => { setModality(event.target.value); setEventPage(1) }}><option>Todas</option><option>Presencial</option><option>Virtual</option></select></label>
+             <label className="select-filter"><span>Ordenar por</span><select value={sortOrder} onChange={(event) => { setSortOrder(event.target.value as EventSort); setEventPage(1) }}>{eventSortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
              <div className="scope-filter">
                <span className="scope-label" id="event-scope-label">Estado de los eventos</span>
                {eventView === 'archivo' ? <div className="scope-context" role="status"><History size={20} aria-hidden="true" /><span><strong>Archivo del mes</strong><small>Eventos de un mes anterior</small></span></div> : eventView === 'proximos' ? <div className="scope-context" role="status"><CalendarDays size={20} aria-hidden="true" /><span><strong>Próximos eventos</strong><small>Actividades de un mes futuro</small></span></div> : <div className="mode-toggle" role="group" aria-labelledby="event-scope-label">
@@ -203,7 +204,7 @@ function App() {
             <Pagination label="eventos" total={filtered.length} page={eventPagination.page} pageSize={eventPageSize} onPageChange={changeEventPage} onPageSizeChange={changeEventPageSize} />
             <div className="event-grid">{visibleEvents.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div>
             {eventPagination.pageCount > 1 && <Pagination label="eventos" total={filtered.length} page={eventPagination.page} pageSize={eventPageSize} onPageChange={changeEventPage} onPageSizeChange={changeEventPageSize} />}
-          </> : <div className="empty-state"><CalendarDays size={30} /><h3>{eventView === 'archivo' ? 'No hay eventos en el archivo de este mes.' : eventView === 'pasados' ? 'No hay eventos pasados en este mes.' : 'No hay eventos para esta búsqueda.'}</h3><p>Prueba con otro mes o ajusta la categoría, el distrito, la modalidad o la búsqueda.</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setDistrict(''); setQuery(''); setEventPage(1) }}>Ver todos los eventos del mes</button></div>}
+          </> : <div className="empty-state"><CalendarDays size={30} /><h3>{eventView === 'archivo' ? 'No hay eventos en el archivo de este mes.' : eventView === 'pasados' ? 'No hay eventos pasados en este mes.' : 'No hay eventos para esta búsqueda.'}</h3><p>Prueba con otro mes o ajusta la categoría, el distrito o la búsqueda.</p><button onClick={() => { setCategory('Todas'); setSortOrder('name-asc'); setDistrict(''); setQuery(''); setEventPage(1) }}>Ver todos los eventos del mes</button></div>}
         </section>
 
         <section className="places-section" id="lugares">

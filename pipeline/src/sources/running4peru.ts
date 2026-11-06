@@ -36,7 +36,7 @@ export function parseRunningEvent(html: string, url: string): CandidateEvent[] {
 }
 
 export const running4PeruSource: SourceAdapter = {
-  key: 'running4peru', label: 'Running4Peru — eventos gratuitos en Lima (90 días, revisión)',
+  key: 'running4peru', label: 'Running4Peru — eventos gratuitos en Lima (90 días)',
   collect: () => collectPages({ key: 'running4peru', url: 'https://www.running4peru.com/eventos',
     listing: runningListing, detail: parseRunningEvent, delayMs: 10_000, browserFallback: true }),
 }

@@ -202,10 +202,10 @@ function extractTime(lines: string[]): string {
 function extractCategory(lines: string[], title: string, description: string): Category {
   for (const line of lines) {
     for (const word of CATEGORY_WORDS) {
-      if (line.toLowerCase() === word.toLowerCase()) return classifyCategory(word, 'Cultura')
+      if (line.toLowerCase() === word.toLowerCase()) return classifyCategory(title, classifyCategory(word, 'Cultura'))
     }
   }
-  return classifyCategory(`${title} ${description}`, 'Cultura')
+  return classifyCategory(title, 'Cultura')
 }
 
 function isMetadataLine(line: string, index: number, dateInfo: DateInfo | null): boolean {

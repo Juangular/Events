@@ -187,7 +187,7 @@ export const eventbriteSource: SourceAdapter = {
       candidates.push({
         title: name,
         description,
-        category: cardCategory ?? classifyCategory(`${name} ${description}`),
+        category: classifyCategory(name, cardCategory ?? 'Otros'),
         modality: modalityFrom(detail),
         startDate,
         endDate: endDate && endDate !== startDate ? endDate : undefined,

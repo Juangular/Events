@@ -103,7 +103,7 @@ export const barrancoSource: SourceAdapter = {
       const time = parseTime(bodyText)
       const registration = registrationUrl($)
       const image = $('img.feed-cover-img').first().attr('src')
-      const category: Category = SPORT_PATTERN.test(fullText) ? 'Deportes' : classifyCategory(fullText, 'Cultura')
+      const category: Category = classifyCategory(title, SPORT_PATTERN.test(fullText) ? 'Deportes' : 'Cultura')
 
       candidates.push({
         title,

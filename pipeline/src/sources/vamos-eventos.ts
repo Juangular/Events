@@ -39,7 +39,7 @@ export function parseVamosEvent(html: string, url: string): CandidateEvent[] {
 }
 
 export const vamosEventosSource: SourceAdapter = {
-  key: 'vamos-eventos', label: 'Vamos Eventos — Lima gratis (revisión de fuente original)',
+  key: 'vamos-eventos', label: 'Vamos Eventos — Lima gratis',
   collect: () => collectPages({ key: 'vamos-eventos', url: 'https://www.vamoseventos.com/lima/gratis',
     listing: vamosListing, detail: parseVamosEvent, browserFallback: true, delayMs: 1000 }),
 }

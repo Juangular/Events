@@ -187,7 +187,7 @@ export const lumSource: SourceAdapter = {
         candidates.push({
           title: activity.title,
           description,
-          category: classifyCategory(`${activity.title} ${description}`, 'Cultura'),
+          category: classifyCategory(activity.title, 'Cultura'),
           modality: 'Presencial',
           startDate: activity.startDate,
           endDate: activity.endDate,
