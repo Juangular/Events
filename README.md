@@ -119,6 +119,21 @@ Para validar una sola fuente sin escribir: `npm run ingest:dry -- --source plaza
 
 En *Run workflow*, el campo opcional `source` permite ejecutar una sola fuente con los secretos de GitHub (por ejemplo, `plaza-norte`). Dejarlo vacío ejecuta todas. El cron siempre consulta todas las fuentes; este filtro manual sirve para diagnosticar bloqueos o validar un adaptador sin repetir toda la corrida.
 
+### Validación inicial desde GitHub Actions — 6 de noviembre de 2026
+
+Los seis adaptadores completaron una extracción local en modo sin escritura. La primera [corrida completa en producción](https://github.com/Juangular/Events/actions/runs/42220872182) mostró diferencias por origen de red:
+
+| Fuente nueva | Resultado observado en CI |
+| --- | --- |
+| Gran Teatro Nacional | 1 borrador; otras funciones todavía no publicaban su enlace de inscripción. |
+| EntradaLibre | 203 borradores para revisión de fuente original. |
+| Running4Peru | 2 borradores; el navegador de respaldo permitió leer la agenda. |
+| Mall del Sur | HTTP 403 / Cloudflare. La [comprobación posterior con Chromium](https://github.com/Juangular/Events/actions/runs/42223260049) también fue bloqueada. |
+| Plaza Norte | HTTP 403 / Cloudflare. La [comprobación posterior con Chromium](https://github.com/Juangular/Events/actions/runs/42223258237) también fue bloqueada. |
+| Vamos Eventos | HTTP 429 / Vercel Security Checkpoint persistente incluso con navegador. |
+
+La corrida guardó 206 borradores y no publicó nuevos eventos. Los tres bloqueos no se silencian ni se presentan como agendas vacías: quedan en `sync_runs`, en el resumen y como fallo del workflow. El cron vuelve a intentar las consultas. La operación completa de esas fuentes desde CI requiere que sus proveedores permitan el acceso desde ese origen; el despliegue correcto de Vercel no resuelve ese bloqueo. Estos resultados son una observación fechada, no una garantía del estado futuro de los sitios.
+
 Agregar una fuente nueva consiste en crear un adaptador en `pipeline/src/sources/` con la interfaz `SourceAdapter` y registrarlo en `pipeline/src/index.ts`. Si un sitio cambia de diseño, el adaptador falla de forma aislada: el error queda en `sync_runs` y las demás fuentes siguen funcionando.
 
 La interfaz permite alternar entre **Disponibles** y **Pasados** junto al selector de mes: en *Disponibles* se ven los eventos vigentes del mes elegido; en *Pasados*, los eventos ya finalizados de ese mes (por ejemplo, seleccionar octubre y ver la agenda pasada de octubre). Para ello, la lectura pública de `events` incluye eventos de cualquier fecha: aplica este cambio una sola vez en `Supabase > SQL Editor` (el resto de `supabase/schema.sql` es idempotente):
