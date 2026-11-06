@@ -168,20 +168,29 @@ input { caret-color: var(--green); }
 .main-nav a { padding: 0 14px; border-radius: 6px; }
 .main-nav a:hover { color: var(--green); background: #e7e9df; }
 
-.hero { min-height: 485px; padding-top: 88px; padding-bottom: 96px; align-items: center; }
-.hero::before { width: min(35vw, 400px); aspect-ratio: 1; top: 50%; right: 5%; border: 1px solid #c7d1c4; background: #e6ebe0; }
+.hero { min-height: 485px; padding-top: 88px; padding-bottom: 96px; align-items: center; justify-content: space-between; gap: 48px; }
+.hero::before { display: none; }
 .hero-copy { max-width: 650px; }
 .hero h1 { font-size: clamp(60px, 7.4vw, 96px); line-height: .98; letter-spacing: -.04em; margin: 23px 0; }
 .hero-intro { max-width: 440px; margin-left: 0; color: var(--ink-soft); font-size: 17px; line-height: 1.65; }
 .hero-cta { margin-left: 0; padding: 13px 19px; border: 1px solid var(--green); border-radius: 4px; background: var(--green); color: #fffdf8; }
 .hero-cta:hover { color: #fffdf8; background: var(--ink); border-color: var(--ink); gap: 12px; }
-.hero-note { top: 22%; right: 9%; align-items: center; color: var(--orange-ink); font-size: 12px; }
-.hero-stamp { right: 13%; bottom: 19%; width: 150px; height: 150px; border: 0; transform: rotate(-9deg); color: var(--green); font: 600 36px/.9 Fraunces, serif; }
-.hero-stamp span { font-size: 72px; letter-spacing: -.04em; }
+.hero-guide { flex: 0 0 330px; padding: 28px 24px; background: #e6ebe0; border-radius: 12px; }
+.hero-guide-title { margin: 0 0 18px; font: 500 27px/1.15 Fraunces, serif; letter-spacing: -.02em; }
+.hero-guide a { display: flex; align-items: center; gap: 14px; min-height: 82px; padding-block: 16px; border-top: 1px solid #bbc9b9; color: var(--green); }
+.hero-guide a > svg { flex: none; }
+.hero-guide a > svg:last-child { margin-left: auto; }
+.hero-guide a span { min-width: 0; }
+.hero-guide strong { display: block; font-size: 15px; }
+.hero-guide small { display: block; margin-top: 5px; color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
+.hero-guide a:hover strong { text-decoration: underline; text-underline-offset: 4px; }
+.hero-guide a:hover { color: var(--orange-ink); }
 
 .explorer { background: #274f3c; padding-top: 58px; padding-bottom: 58px; }
 .explorer .section-heading h2, .places-heading h2 { font-size: clamp(30px, 3vw, 40px); line-height: 1.12; letter-spacing: -.03em; }
 .explorer .location-label { color: #e1eade; }
+.explorer-location { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.explorer-location .free-pill { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
 .search-row { margin-top: 28px; margin-bottom: 14px; }
 .search-box { min-height: 58px; border-radius: 6px; background: var(--surface); color: #536257; }
 .search-box input { min-height: 44px; font-size: 16px; }
@@ -195,6 +204,16 @@ input { caret-color: var(--green); }
 .mode-toggle button { color: #e2ece3; padding-inline: 15px; }
 .mode-toggle button:hover { background: #38664f; }
 .mode-toggle button[aria-pressed="true"], .mode-toggle button[aria-pressed="true"]:hover { background: #fffdf8; color: #1b3528; }
+.scope-filter { display: flex; flex-direction: column; justify-content: center; gap: 6px; flex: 0 1 272px; min-width: 254px; padding: 10px; border: 1px solid #789887; border-radius: 5px; }
+.scope-label { color: #e1eade; font-size: 12px; }
+.scope-filter .mode-toggle { min-height: 50px; min-width: 0; padding: 3px; gap: 3px; border: 0; border-radius: 5px; background: #183d2c; overflow: visible; }
+.scope-filter .mode-toggle button { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 3px; font: 600 13px 'DM Sans', sans-serif; text-transform: none; letter-spacing: normal; }
+.scope-filter .mode-toggle button svg { flex: none; }
+.scope-context { display: flex; align-items: center; gap: 12px; min-height: 50px; color: #fffdf8; }
+.scope-context > svg { flex: none; }
+.scope-context strong, .scope-context small { display: block; }
+.scope-context strong { font-size: 14px; font-weight: 600; }
+.scope-context small { margin-top: 4px; color: #e1eade; font-size: 12px; line-height: 1.4; }
 .free-pill { color: #f0f6ec; border-color: #a8c0ab; white-space: nowrap; }
 
 .results-section { max-width: 1320px; padding-top: 74px; padding-bottom: 96px; }
@@ -243,8 +262,9 @@ footer p { color: #c8d3c9; }
 .explorer .search-box input:focus-visible { outline-color: #315d45; outline-offset: -3px; }
 
 @media (min-width: 761px) and (max-width: 1050px) {
-  .hero::before { right: 3%; }
-  .hero-stamp { right: 9%; }
+  .hero { gap: 30px; }
+  .hero-guide { flex-basis: 280px; padding: 24px 20px; }
+  .hero-guide-title { font-size: 25px; }
   .event-grid, .places-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
@@ -252,20 +272,18 @@ footer p { color: #c8d3c9; }
   .main-nav.is-open { top: 68px; }
   .menu-button:hover { color: var(--green); }
   .hero { min-height: 0; display: block; padding: 62px 22px 70px; }
-  .hero::before { width: 170px; right: -74px; top: 36px; bottom: auto; transform: none; }
   .hero h1 { font-size: clamp(54px, 13vw, 76px); letter-spacing: -.04em; }
   .hero-copy { max-width: 100%; }
   .hero-intro { max-width: 330px; font-size: 16px; }
-  .hero-note { position: static; margin-top: 26px; }
-  .hero-note br { display: none; }
-  .hero-note strong { margin-left: 4px; }
-  .hero-stamp { display: none; }
+  .hero-guide { margin-top: 34px; padding: 24px; }
+  .hero-guide-title { font-size: 25px; }
   .explorer { padding: 44px 22px; }
   .search-row { margin-top: 24px; }
   .filter-toggle { border-radius: 4px; border-color: #b1c6b3; }
   .month-filter, .select-filter, .mode-toggle { min-height: 64px; }
   .mode-toggle button { flex: 1; }
   .filter-bar .select-filter select { min-height: 28px; }
+  .scope-filter { flex: 0 0 auto; min-width: 0; }
   .results-section, .places-section { padding: 56px 22px 70px; }
   .event-grid, .places-grid { grid-template-columns: minmax(0, 1fr); gap: 38px; }
   .card-image-wrap, .place-image-wrap { height: auto; }

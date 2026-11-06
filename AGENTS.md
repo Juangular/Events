@@ -1,5 +1,13 @@
 # Agent Instructions
 
+## Skills: required workflow for every change
+
+- Juan explicitly wants all skills genuinely related to each requested change to be considered and applied. Before implementing, read the local inventory and selection guide in `docs/skills-guide.md`, compare the request and affected files with each skill's scope, then read the applicable `SKILL.md` instructions and relevant references. Do not choose skills by name or keywords alone.
+- Combine complementary skills: UI changes require design, UX, accessibility, and React guidance; copy changes also require copywriting; database or security changes need their own specialist skills. Apply every relevant skill, not just the first match. Do not run unrelated workflows or change unrelated systems just because a skill is installed.
+- Reuse skills already loaded in the current conversation. If local and global versions differ, prefer the project's local instructions when the runtime supports them and record which instructions were used; do not silently update either installation.
+- Briefly identify the skills used and the decisions or checks they contributed. When skills disagree, follow the user's explicit scope, project constraints, and higher-priority instructions. If Juan delegates design decisions, do not reopen already-settled preferences.
+- Revisit applicability when scope changes. Keep `docs/skills-guide.md` synchronized when local skills are added or removed. Extra globally available skills may supplement the local set, but must not be presented as installed in the project.
+
 ## Project
 
 - Plan Lima is a single React + TypeScript + Vite frontend; there is no monorepo or backend application.
