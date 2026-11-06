@@ -4,6 +4,7 @@ import { categories } from './data'
 import { getPublicEvents } from './lib/events'
 import { getEventImage } from './lib/event-images'
 import { getPublicPlaces } from './lib/places'
+import { getPagination } from './lib/pagination'
 import { useDialogLifecycle } from './hooks/useDialogLifecycle'
 import type { EventItem, PlaceItem } from './types'
 
@@ -65,6 +66,12 @@ function App() {
   const [selectedPlace, setSelectedPlace] = useState<PlaceItem | null>(null)
   const [mobileFilters, setMobileFilters] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [eventPage, setEventPage] = useState(1)
+  const [eventPageSize, setEventPageSize] = useState(10)
+  const [placePage, setPlacePage] = useState(1)
+  const [placePageSize, setPlacePageSize] = useState(10)
+  const eventHeading = useRef<HTMLHeadingElement>(null)
+  const placeHeading = useRef<HTMLHeadingElement>(null)
   const menuButton = useRef<HTMLButtonElement>(null)
   const menuNav = useRef<HTMLElement>(null)
 
@@ -80,7 +87,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedQuery(query.trim()), 200)
+    const timeout = setTimeout(() => { setDebouncedQuery(query.trim()); setEventPage(1) }, 200)
     return () => clearTimeout(timeout)
   }, [query])
 
@@ -127,7 +134,26 @@ function App() {
     const next = new Date(year, month + direction, 1)
     setMonth(next.getMonth())
     setYear(next.getFullYear())
+    setEventPage(1)
   }
+
+  const eventPagination = getPagination(filtered.length, eventPage, eventPageSize)
+  const placePagination = getPagination(places.length, placePage, placePageSize)
+  const visibleEvents = filtered.slice(eventPagination.start, eventPagination.end)
+  const visiblePlaces = places.slice(placePagination.start, placePagination.end)
+
+  const changeEventPage = (page: number) => {
+    setEventPage(page)
+    eventHeading.current?.focus({ preventScroll: true })
+    eventHeading.current?.scrollIntoView({ block: 'start' })
+  }
+  const changePlacePage = (page: number) => {
+    setPlacePage(page)
+    placeHeading.current?.focus({ preventScroll: true })
+    placeHeading.current?.scrollIntoView({ block: 'start' })
+  }
+  const changeEventPageSize = (size: number) => { setEventPageSize(size); setEventPage(1) }
+  const changePlacePageSize = (size: number) => { setPlacePageSize(size); setPlacePage(1) }
 
   const latestUpdatedAt = [...events, ...places].reduce<string | undefined>((latest, item) => {
     if (!item.updatedAt) return latest
@@ -160,20 +186,33 @@ function App() {
            <div className="search-row"><div className="search-box"><Search size={19} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por nombre, lugar o tema..." aria-label="Buscar eventos" />{query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} aria-hidden="true" /></button>}</div><button className="filter-toggle" aria-expanded={mobileFilters} aria-controls="filtros-eventos" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? <X size={17} aria-hidden="true" /> : <SlidersHorizontal size={17} aria-hidden="true" />} {mobileFilters ? 'Ocultar filtros' : 'Filtros'}</button></div>
            <div className={`filter-bar ${mobileFilters ? 'is-open' : ''}`} id="filtros-eventos">
               <div className="month-filter"><button aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft size={17} /></button><div><span>Viendo eventos de</span><strong>{monthNames[month]} {year}</strong></div><button aria-label="Mes siguiente" onClick={() => shiftMonth(1)}><ChevronRight size={17} /></button></div>
-            <div className="mode-toggle" role="group" aria-label="Tipo de eventos"><button type="button" aria-pressed={scope === 'disponibles'} onClick={() => setScope('disponibles')}>Disponibles</button><button type="button" aria-pressed={scope === 'pasados'} onClick={() => setScope('pasados')}>Pasados</button></div>
-            <label className="select-filter"><span>Categoría</span><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
-             <label className="select-filter"><span>Modalidad</span><select value={modality} onChange={(event) => setModality(event.target.value)}><option>Todas</option><option>Presencial</option><option>Virtual</option></select></label>
-             <label className="select-filter"><span>Distrito</span><select value={district} onChange={(event) => setDistrict(event.target.value)}><option value="">Todos los distritos</option>{districts.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+             <div className="mode-toggle" role="group" aria-label="Tipo de eventos"><button type="button" aria-pressed={scope === 'disponibles'} onClick={() => { setScope('disponibles'); setEventPage(1) }}>Disponibles</button><button type="button" aria-pressed={scope === 'pasados'} onClick={() => { setScope('pasados'); setEventPage(1) }}>Pasados</button></div>
+             <label className="select-filter"><span>Categoría</span><select value={category} onChange={(event) => { setCategory(event.target.value as typeof category); setEventPage(1) }}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
+             <label className="select-filter"><span>Modalidad</span><select value={modality} onChange={(event) => { setModality(event.target.value); setEventPage(1) }}><option>Todas</option><option>Presencial</option><option>Virtual</option></select></label>
+             <label className="select-filter"><span>Distrito</span><select value={district} onChange={(event) => { setDistrict(event.target.value); setEventPage(1) }}><option value="">Todos los distritos</option>{districts.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
             <span className="free-pill">● Todo gratis</span>
           </div>
         </section>
 
-        <section className="results-section"><span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados</span><div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>{loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <div className="event-grid">{filtered.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div> : <div className="empty-state"><CalendarDays size={30} /><h3>{scope === 'pasados' ? 'No hay eventos pasados en este mes.' : 'No hay eventos para esta búsqueda.'}</h3><p>{scope === 'pasados' ? 'Prueba con otro mes o distrito, o vuelve a eventos disponibles.' : 'Prueba con otro mes, categoría, modalidad, distrito o palabra clave.'}</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setDistrict(''); setQuery('') }}>Ver todos los eventos del mes</button></div>}</section>
+        <section className="results-section" aria-labelledby="event-results-title">
+          <span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados. Página {eventPagination.page} de {eventPagination.pageCount}.</span>
+          <div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2 id="event-results-title" ref={eventHeading} tabIndex={-1}>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>
+          {loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <>
+            <Pagination label="eventos" total={filtered.length} page={eventPagination.page} pageSize={eventPageSize} onPageChange={changeEventPage} onPageSizeChange={changeEventPageSize} />
+            <div className="event-grid">{visibleEvents.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div>
+            {eventPagination.pageCount > 1 && <Pagination label="eventos" total={filtered.length} page={eventPagination.page} pageSize={eventPageSize} onPageChange={changeEventPage} onPageSizeChange={changeEventPageSize} />}
+          </> : <div className="empty-state"><CalendarDays size={30} /><h3>{scope === 'pasados' ? 'No hay eventos pasados en este mes.' : 'No hay eventos para esta búsqueda.'}</h3><p>{scope === 'pasados' ? 'Prueba con otro mes o distrito, o vuelve a eventos disponibles.' : 'Prueba con otro mes, categoría, modalidad, distrito o palabra clave.'}</p><button onClick={() => { setCategory('Todas'); setModality('Todas'); setDistrict(''); setQuery(''); setEventPage(1) }}>Ver todos los eventos del mes</button></div>}
+        </section>
 
         <section className="places-section" id="lugares">
-          <div className="places-heading"><div><span className="section-kicker">Guía local</span><h2>Lugares que visitar en Lima</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
+          <div className="places-heading"><div><span className="section-kicker">Guía local</span><h2 ref={placeHeading} tabIndex={-1}>Lugares que visitar en Lima</h2></div><span className="location-label"><MapPin size={15} /> Lima, Perú</span></div>
           <p className="places-intro">Parques, paseos y espacios culturales gratuitos para descubrir Lima a tu ritmo.</p>
-          {placesLoading ? <div className="empty-state"><MapPin size={30} /><h3>Cargando lugares...</h3><p>Preparamos ideas para tu próxima salida.</p></div> : placesError ? <div className="empty-state"><X size={30} /><h3>{placesError}</h3><p>Mientras tanto, puedes explorar los eventos gratuitos.</p></div> : places.length > 0 ? <div className="places-grid">{places.map((place, index) => <PlaceCard key={place.id} place={place} index={index} onOpen={setSelectedPlace} />)}</div> : <div className="empty-state"><MapPin size={30} /><h3>Aún no hay lugares en la guía.</h3><p>Vuelve pronto para descubrir nuevos espacios de Lima.</p></div>}
+          <span className="visually-hidden" aria-live="polite">{places.length} lugares. Página {placePagination.page} de {placePagination.pageCount}.</span>
+          {placesLoading ? <div className="empty-state"><MapPin size={30} /><h3>Cargando lugares...</h3><p>Preparamos ideas para tu próxima salida.</p></div> : placesError ? <div className="empty-state"><X size={30} /><h3>{placesError}</h3><p>Mientras tanto, puedes explorar los eventos gratuitos.</p></div> : places.length > 0 ? <>
+            <Pagination label="lugares" total={places.length} page={placePagination.page} pageSize={placePageSize} onPageChange={changePlacePage} onPageSizeChange={changePlacePageSize} />
+            <div className="places-grid">{visiblePlaces.map((place, index) => <PlaceCard key={place.id} place={place} index={index} onOpen={setSelectedPlace} />)}</div>
+            {placePagination.pageCount > 1 && <Pagination label="lugares" total={places.length} page={placePagination.page} pageSize={placePageSize} onPageChange={changePlacePage} onPageSizeChange={changePlacePageSize} />}
+          </> : <div className="empty-state"><MapPin size={30} /><h3>Aún no hay lugares en la guía.</h3><p>Vuelve pronto para descubrir nuevos espacios de Lima.</p></div>}
         </section>
       </main>
       <footer id="fuentes"><div className="footer-brand"><span className="brand-mark">P</span><strong>plan.lima</strong></div><p>Agenda de eventos gratuitos y guía de lugares para disfrutar Lima.</p><span>Hecho con curiosidad · {currentYear}</span></footer>
@@ -182,6 +221,26 @@ function App() {
       {selectedPlace && <PlaceModal place={selectedPlace} onClose={closeSelectedPlace} />}
     </div>
   )
+}
+
+function Pagination({ label, total, page, pageSize, onPageChange, onPageSizeChange }: {
+  label: string
+  total: number
+  page: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
+}) {
+  const { pageCount, start, end } = getPagination(total, page, pageSize)
+  return <nav className="pagination" aria-label={`Paginación de ${label}`}>
+    <p className="pagination-summary">{start + 1}–{end} de {total} {label}</p>
+    <label className="pagination-size"><span>Por página<span className="visually-hidden"> de {label}</span></span><select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>{[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>
+    <div className="pagination-pages">
+      <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)} aria-label={`Página anterior de ${label}`}><ChevronLeft size={16} aria-hidden="true" /><span>Anterior</span></button>
+      <span className="pagination-current">Página {page} de {pageCount}</span>
+      <button type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)} aria-label={`Página siguiente de ${label}`}><span>Siguiente</span><ChevronRight size={16} aria-hidden="true" /></button>
+    </div>
+  </nav>
 }
 
 function handleEventImageError(element: HTMLImageElement, event: EventItem) {
