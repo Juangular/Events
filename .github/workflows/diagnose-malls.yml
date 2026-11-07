@@ -1,0 +1,53 @@
+name: Diagnosticar acceso a malls
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diagnose-malls
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: ${{ matrix.source }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        source: [mall-del-sur, plaza-norte]
+    defaults:
+      run:
+        working-directory: pipeline
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pipeline/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Check adapters
+        run: npm run typecheck && npm test
+      - name: Collect and validate without database writes
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: npm run ingest:dry -- --source "$SOURCE" 2>&1 | tee mall-diagnostic.log
+      - name: Preserve diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mall-diagnostic-${{ matrix.source }}-${{ matrix.os }}
+          path: pipeline/mall-diagnostic.log
+          if-no-files-found: warn
+          retention-days: 7
