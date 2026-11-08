@@ -87,7 +87,7 @@ Las nuevas fuentes tienen límites de 20 páginas y 500 fichas por ejecución, e
 
 Cuando un evento no tiene `image_url`, la interfaz busca una imagen relacionada con el título dentro de su categoría y, si no encuentra coincidencia, usa la imagen general de la categoría. Tarjetas y modal comparten el fallback de imagen propia a imagen por título y finalmente por categoría, sin reintentos en bucle. Las imágenes manuales en Supabase no se modifican con las corridas del pipeline.
 
-Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima o Callao, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar), leyendo todas las páginas. Las actividades continuas también se comparan por título, lugar, URL y fecha final: que la fuente desplace su inicio a «hoy» no genera otra copia. Las funciones reales en fechas distintas conservan tarjetas separadas. Los registros automáticos llevan `origin = 'auto'` y `source_key`; `department` conserva Callao cuando corresponde. RLS muestra solo eventos publicados, gratuitos y de Lima/Callao, y la interfaz organiza las fechas actuales, futuras y de archivo.
+Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima o Callao, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar), leyendo todas las páginas. Las actividades continuas también se comparan por título, lugar, URL y fecha final: que la fuente desplace su inicio a «hoy» no genera otra copia. Las funciones reales se conservan como registros separados, pero la interfaz agrupa las de una misma ficha, nombre y lugar en una tarjeta con sus fechas y horarios. Los registros automáticos llevan `origin = 'auto'` y `source_key`; `department` conserva Callao cuando corresponde. RLS muestra solo eventos publicados, gratuitos y de Lima/Callao, y la interfaz organiza las fechas actuales, futuras y de archivo.
 
 ### Publicación directa
 
@@ -161,6 +161,8 @@ using (
 ```
 
 ### Adaptación de datos y carga de imágenes
+
+Las actividades recurrentes se agrupan con `src/lib/event-groups.ts` después de filtrar por mes, estado, categoría, distrito y búsqueda, y antes de ordenar y paginar. Así, «KARAOKE CON JORGE COLLAO» aparece una sola vez y su detalle enumera cada función real, sin convertir los días intermedios en un rango continuo. El contador corresponde a tarjetas de actividades. No se mezclan fichas, lugares o destinos de inscripción diferentes ni se eliminan las funciones de Supabase. Pruebas: `node --test scripts/test-event-groups.mjs`.
 
 La consulta pública trae solo eventos que se superponen con el mes seleccionado, incluidos los que comenzaron antes y aún continúan. Pagina de 500 en 500 con orden estable para superar el límite predeterminado de la API. Al cambiar de mes cancela la petición anterior. Una fila inválida se omite con aviso; una URL de imagen inválida usa el fallback sin descartar el evento.
 

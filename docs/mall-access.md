@@ -62,7 +62,7 @@ La comprobación manual del servicio permanente pasó. La primera ejecución dis
 
 La auditoría pública encontró copias de una misma ficha de EntradaLibre con inicio distinto pero idéntica fecha final. El `fingerprint` incluía el inicio y permitía reinsertarlas cuando la fuente movía el inicio a «hoy».
 
-`pipeline/src/core/duplicates.ts` conserva el fingerprint para funciones independientes y añade una identidad de actividad continua: título y lugar normalizados, URL de la fuente y fecha final efectiva, con al menos un registro de varios días. Los parámetros de seguimiento se ignoran, pero se conservan parámetros que identifican funciones distintas. No se agrupan funciones de un solo día solo por coincidir en nombre. Juan eligió explícitamente **una tarjeta por función real**.
+`pipeline/src/core/duplicates.ts` conserva el fingerprint para funciones independientes y añade una identidad de actividad continua: título y lugar normalizados, URL de la fuente y fecha final efectiva, con al menos un registro de varios días. Los parámetros de seguimiento se ignoran, pero se conservan parámetros que identifican funciones distintas. No se agrupan registros de un solo día solo por coincidir en nombre. Juan eligió inicialmente una tarjeta por función; al revisar el karaoke cambió esa preferencia por **una tarjeta por actividad recurrente, con las fechas en el detalle**. La agrupación se hace en el frontend (`src/lib/event-groups.ts`); las funciones siguen guardadas por separado y no se confunden con las copias incorrectas reparadas en la base.
 
 [Ejecución de reparación e ingesta](https://github.com/Juangular/Events/actions/runs/42436968126), segundo intento después de corregir la ruta del servicio:
 

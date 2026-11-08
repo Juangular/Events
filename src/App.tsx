@@ -8,6 +8,7 @@ import { getPagination } from './lib/pagination'
 import { getEventView, matchesEventView } from './lib/event-view'
 import type { EventScope } from './lib/event-view'
 import { eventSortOptions, sortEvents } from './lib/event-sort'
+import { groupEventFunctions } from './lib/event-groups'
 import type { EventSort } from './lib/event-sort'
 import { useDialogLifecycle } from './hooks/useDialogLifecycle'
 import { CardImage } from './components/CardImage'
@@ -128,7 +129,7 @@ function App() {
   const districts = useMemo(() => [...new Set(events.flatMap((event) => event.district ? [event.district] : []))].sort((a, b) => a.localeCompare(b, 'es')), [events])
   const eventView = getEventView(month, year, today, scope)
 
-  const filtered = useMemo(() => sortEvents(events.filter((event) => {
+  const filtered = useMemo(() => sortEvents(groupEventFunctions(events.filter((event) => {
     const matchesMonth = overlapsMonth(event, month, year)
     const eventEnd = event.endDate ?? event.startDate
     const matchesScope = matchesEventView(eventView, eventEnd, today)
@@ -137,7 +138,7 @@ function App() {
     const search = debouncedQuery.toLowerCase()
     const matchesQuery = !search || `${event.title} ${event.description} ${event.place} ${event.category}`.toLowerCase().includes(search)
     return matchesMonth && matchesScope && matchesCategory && matchesDistrict && matchesQuery
-  }), sortOrder), [events, month, year, eventView, today, category, sortOrder, district, debouncedQuery])
+  })), sortOrder), [events, month, year, eventView, today, category, sortOrder, district, debouncedQuery])
 
   const shiftMonth = (direction: number) => {
     const next = new Date(year, month + direction, 1)
@@ -207,8 +208,8 @@ function App() {
         </section>
 
         <section className="results-section" aria-labelledby="event-results-title">
-          <span className="visually-hidden" aria-live="polite">{filtered.length} eventos encontrados. Página {eventPagination.page} de {eventPagination.pageCount}.</span>
-          <div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2 id="event-results-title" ref={eventHeading} tabIndex={-1}>{filtered.length} <span>eventos encontrados</span></h2></div><div className="results-rule" /></div>
+          <span className="visually-hidden" aria-live="polite">{filtered.length} {filtered.length === 1 ? 'evento encontrado' : 'eventos encontrados'}. Página {eventPagination.page} de {eventPagination.pageCount}.</span>
+          <div className="results-header"><div><span className="section-kicker">Selección editorial</span><h2 id="event-results-title" ref={eventHeading} tabIndex={-1}>{filtered.length} <span>{filtered.length === 1 ? 'evento encontrado' : 'eventos encontrados'}</span></h2></div><div className="results-rule" /></div>
           {loading ? <div className="empty-state"><CalendarDays size={30} /><h3>Cargando eventos...</h3><p>Buscamos actividades gratuitas para las fechas que elegiste.</p></div> : loadError ? <div className="empty-state"><X size={30} /><h3>{loadError}</h3><button onClick={() => window.location.reload()}>Volver a cargar</button></div> : filtered.length > 0 ? <>
             <Pagination label="eventos" total={filtered.length} page={eventPagination.page} pageSize={eventPageSize} onPageChange={changeEventPage} onPageSizeChange={changeEventPageSize} />
             <div className="event-grid">{visibleEvents.map((event, index) => <EventCard key={event.id} event={event} index={index} onOpen={setSelected} />)}</div>
@@ -263,7 +264,7 @@ function handleEventImageError(element: HTMLImageElement, event: EventItem) {
 }
 
 function EventCard({ event, index, onOpen }: { event: EventItem; index: number; onOpen: (event: EventItem) => void }) {
-  return <article className="event-card" role="button" tabIndex={0} aria-label={`Ver detalles de ${event.title}`} style={{ '--delay': `${index * 70}ms` } as React.CSSProperties} onClick={() => onOpen(event)} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') { keyboardEvent.preventDefault(); onOpen(event) } }}><div className="card-image-wrap"><CardImage src={event.image} alt={event.title} width={600} height={400} onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><span className="free-badge">GRATIS</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div><div className="card-content"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h3>{event.title}</h3><div className="card-date"><CalendarDays size={14} /> {formatDate(event.startDate, event.endDate)}</div><div className="card-place"><MapPin size={14} /> {event.district ?? event.place}</div>{event.requiresRegistration && <span className="registration-note">Requiere inscripción</span>}</div></article>
+  return <article className="event-card" role="button" tabIndex={0} aria-label={`Ver detalles de ${event.title}`} style={{ '--delay': `${index * 70}ms` } as React.CSSProperties} onClick={() => onOpen(event)} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') { keyboardEvent.preventDefault(); onOpen(event) } }}><div className="card-image-wrap"><CardImage src={event.image} alt={event.title} width={600} height={400} onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><span className="free-badge">GRATIS</span><span className="card-arrow"><ArrowUpRight size={18} /></span></div><div className="card-content"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h3>{event.title}</h3><div className="card-date"><CalendarDays size={14} /> {event.occurrences ? `Desde ${formatDate(event.startDate)} · ${event.occurrences.length} funciones` : formatDate(event.startDate, event.endDate)}</div><div className="card-place"><MapPin size={14} /> {event.district ?? event.place}</div>{event.requiresRegistration && <span className="registration-note">Requiere inscripción</span>}</div></article>
 }
 
 function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; onOpen: (place: PlaceItem) => void }) {
@@ -279,7 +280,35 @@ function PlaceCard({ place, index, onOpen }: { place: PlaceItem; index: number; 
 function EventModal({ event, onClose }: { event: EventItem; onClose: () => void }) {
   const { closeButtonRef, dialogRef } = useDialogLifecycle(onClose)
 
-  return <div className="modal-backdrop" onClick={onClose}><div ref={dialogRef} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}><button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button><img className="modal-image" src={event.image} alt={event.title} decoding="async" onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} /><div className="modal-body"><div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div><h2 id="event-dialog-title">{event.title}</h2><p id="event-dialog-description" className="modal-description">{event.description}</p><div className="detail-grid"><div><span>Cuándo</span><strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong></div><div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}{event.department !== 'Callao' && ', Lima'}</>}</strong></div><div><span>Organiza</span><strong>{event.organizer}</strong></div><div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div></div><div className="modal-actions"><a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver evento en la fuente'} <ExternalLink size={16} aria-hidden="true" /></a><span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span></div></div></div></div>
+  return <div className="modal-backdrop" onClick={onClose}>
+    <div ref={dialogRef} className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title" aria-describedby="event-dialog-description" onClick={(modalEvent) => modalEvent.stopPropagation()}>
+      <button ref={closeButtonRef} className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={20} aria-hidden="true" /></button>
+      <img className="modal-image" src={event.image} alt={event.title} decoding="async" onError={(imageEvent) => handleEventImageError(imageEvent.currentTarget, event)} />
+      <div className="modal-body">
+        <div className="card-meta"><span>{event.category}</span><span>{event.modality}</span></div>
+        <h2 id="event-dialog-title">{event.title}</h2>
+        <p id="event-dialog-description" className="modal-description">{event.description}</p>
+        <div className="detail-grid">
+          <div className={event.occurrences ? 'schedule-detail' : undefined}>
+            <span>Cuándo</span>
+            {event.occurrences ? <ul className="event-occurrences" aria-label="Fechas y horarios de las funciones">
+              {event.occurrences.map(occurrence => <li key={occurrence.id}>
+                <strong><time dateTime={occurrence.startDate}>{formatDate(occurrence.startDate, occurrence.endDate)}</time></strong>
+                <small>{occurrence.time}</small>
+              </li>)}
+            </ul> : <strong>{formatDate(event.startDate, event.endDate)}<br />{event.time}</strong>}
+          </div>
+          <div><span>Dónde</span><strong>{event.place}{event.district && <><br />{event.district}{event.department !== 'Callao' && ', Lima'}</>}</strong></div>
+          <div><span>Organiza</span><strong>{event.organizer}</strong></div>
+          <div><span>Entrada</span><strong className="green-text">Gratis{event.requiresRegistration && ' · requiere inscripción'}</strong></div>
+        </div>
+        <div className="modal-actions">
+          <a className="primary-button" href={event.requiresRegistration && event.registrationUrl ? event.registrationUrl : event.sourceUrl} target="_blank" rel="noopener noreferrer">{event.requiresRegistration && event.registrationUrl ? 'Inscribirme' : 'Ver evento en la fuente'} <ExternalLink size={16} aria-hidden="true" /></a>
+          <span className="source-copy">Fuente: <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.source}</strong></a></span>
+        </div>
+      </div>
+    </div>
+  </div>
 }
 
 function PlaceModal({ place, onClose }: { place: PlaceItem; onClose: () => void }) {

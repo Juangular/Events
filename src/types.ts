@@ -2,6 +2,13 @@ export type Category = 'Cultura' | 'Música' | 'Deportes' | 'Educación' | 'Tecn
 export type Modality = 'Presencial' | 'Virtual'
 export type PlaceCategory = 'Historia y patrimonio' | 'Cultura y museos' | 'Parques y naturaleza' | 'Miradores y paseos' | 'Playas' | 'Barrios y arquitectura'
 
+export interface EventOccurrence {
+  id: string
+  startDate: string
+  endDate?: string
+  time: string
+}
+
 export interface EventItem {
   id: string
   title: string
@@ -22,6 +29,7 @@ export interface EventItem {
   requiresRegistration?: boolean
   tags: string[]
   updatedAt?: string
+  occurrences?: EventOccurrence[]
 }
 
 export interface EventRow {

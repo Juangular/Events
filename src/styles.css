@@ -260,6 +260,10 @@ footer p { color: #c8d3c9; }
 .modal-description, .place-description p { color: var(--ink-soft); font-size: 15px; }
 .detail-grid span, .place-location span, .place-entry span, .place-description span { color: #526157; }
 .detail-grid strong, .place-location strong, .place-entry strong { font-size: 14px; }
+.schedule-detail { grid-column: 1 / -1; }
+.event-occurrences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 14px 24px; margin: 0; padding: 0; list-style: none; }
+.event-occurrences li { display: grid; gap: 4px; }
+.event-occurrences small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
 .primary-button { border-radius: 4px; font-size: 13px; }
 .event-card:focus-visible, .place-card-trigger:focus-visible, .menu-button:focus-visible, button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #a93d1e; outline-offset: 4px; }
 .explorer :focus-visible { outline-color: #fff4c8; }
