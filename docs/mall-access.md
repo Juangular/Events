@@ -2,7 +2,7 @@
 
 ## Estado verificado el 7 de noviembre de 2026
 
-Inicialmente Juan eligió una solución sin equipo propio. Después autorizó probar un runner temporal en su Mac y realizar una primera publicación. Ambas ejecuciones manuales de GitHub Actions usando ese equipo terminaron correctamente; los runners cloud probados siguen bloqueados. Ya se publicaron 44 eventos, pero todavía no se instaló un servicio permanente ni se activó un cron local.
+Inicialmente Juan eligió una solución sin equipo propio. Después autorizó probar un runner temporal en su Mac, publicar eventos y configurar la actualización diaria a las **22:00 de Perú**. Ya se publicaron 44 eventos y el runner permanente quedó instalado y conectado. La tarea de GitHub usa `0 3 * * *` (03:00 UTC); los runners cloud probados siguen bloqueados.
 
 | Prueba | Mall del Sur | Plaza Norte |
 | --- | --- | --- |
@@ -23,13 +23,13 @@ Corridas:
 - [Matriz Linux/macOS sin escritura](https://github.com/Juangular/Events/actions/runs/42350701720): los cuatro trabajos fallaron al acceder al listado; instalación, typecheck y pruebas pasaron. Incluye logs descargables durante siete días.
 - [Prueba manual desde el Mac local](https://github.com/Juangular/Events/actions/runs/42434044036): extracción, typecheck y pruebas completados en 1 min 13 s. Fue `dry-run`: los contadores «publicados» representan candidatos válidos, no inserciones. Se descartaron eventos pasados y una programación ambigua. El runner efímero se dio de baja al terminar y GitHub confirmó cero runners registrados.
 
-## Prueba con equipo propio
+## Prueba inicial con equipo propio
 
-`.github/workflows/test-local-malls.yml` (nombre visible: **Malls en Mac local**) se activa únicamente a mano, por el propietario del repositorio y desde `main`. Usa la etiqueta dedicada `plan-lima-malls-test`; el runner temporal se registró sin etiquetas genéricas para no recibir trabajos dirigidos a `self-hosted`. El checkout usa el commit de la ejecución y no conserva credenciales de Git. Por defecto `publish=false`: ejecuta los dos adaptadores sin secretos de Supabase ni escritura en la base. Con `publish=true`, solo el paso de ingesta recibe `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` desde GitHub Secrets; instala dependencias y ejecuta las pruebas antes de entregar esos secretos al proceso de publicación.
+La prueba inicial utilizó la etiqueta `plan-lima-malls-test` y un runner efímero de un solo trabajo. Fue reemplazado por el servicio permanente descrito abajo. El checkout usa el commit de la ejecución y no conserva credenciales de Git. Los secretos de Supabase solo se entregan a los pasos que necesitan publicar o reparar datos, después de instalar dependencias y pasar las pruebas.
 
 Se usó el runner oficial `actions/runner` 2.338.2 para macOS ARM64, verificando SHA-256 contra el digest publicado en su release. Se utilizó Chrome instalado y Node 22. La descarga y el checkout de prueba están en el directorio temporal de OpenCode, fuera del repositorio. No se instaló un servicio de inicio ni se modificó la suspensión del Mac.
 
-Este workflow necesita registrar y arrancar de nuevo un runner temporal antes de otra prueba; el registro anterior dejó de existir al completar su único trabajo. No es todavía una automatización diaria.
+El runner de esas primeras pruebas dejó de existir al completar su trabajo. Ya no es necesario registrarlo otra vez para la operación normal: existe un servicio permanente independiente.
 
 ## Primera publicación real
 
@@ -44,17 +44,35 @@ La lectura con la clave pública de Supabase devolvió los 44 registros: todos p
 
 El runner se dio de baja al completar la tarea. Los secretos se suministraron al paso de ingesta, no al frontend ni al repositorio. La ejecución no actualizó ni borró eventos existentes.
 
-## Operación: qué es automático y qué falta
+## Operación diaria activa
 
 - La extracción, validación, publicación, descarte de duplicados y reporte son automáticos **durante una ejecución**. No hay que cargar a mano cada evento.
 - Los eventos ya guardados se sirven desde Supabase y Vercel aunque el Mac esté apagado. No es necesario desplegar otra vez para mostrar nuevas filas.
-- Las actualizaciones futuras de estos dos malls **todavía no son diarias automáticamente**. El workflow local solo tiene `workflow_dispatch` y no hay runner permanente registrado.
-- Para repetirlo manualmente hay que registrar y arrancar de nuevo un runner autorizado y luego ejecutar **Malls en Mac local**, rama `main`, con `publish=true`. Pulsar Run workflow sin un runner disponible deja la tarea esperando; no arranca el programa en el Mac.
-- Para automatizarlo diariamente hay que acordar un horario con Juan, configurar un runner/servicio permanente y coordinar su ejecución con el cron existente del resto de fuentes. El Mac debe tener sesión y servicio disponibles, internet y estar despierto en ese horario. El editor y la web no tienen que estar abiertos.
+- **Malls en Mac local** publica automáticamente cada día a las **22:00 America/Lima** (03:00 UTC). GitHub puede retrasar el inicio de los trabajos programados; no es una garantía al minuto exacto.
+- Runner: `plan-lima-malls-mac`, etiqueta exclusiva `plan-lima-malls`, sin etiquetas genéricas. Se instaló en `/Users/juan/.local/share/plan-lima-runner`, una ruta sin espacios. El primer intento en `Library/Application Support` falló antes del checkout por cómo GitHub invoca los scripts; aquel servicio se desinstaló y el runner se dio de baja antes de reinstalarlo en la ruta final.
+- Inicio de sesión: `~/Library/LaunchAgents/actions.runner.Juangular-Events.plan-lima-malls-mac.plist`, con `RunAtLoad=true`. Servicio arrancado y verificado online después de completar una tarea real. No depende del editor ni de una terminal abierta.
+- Para ejecutar a mano: GitHub → Actions → **Malls en Mac local** → Run workflow → rama `main`. Con `publish=true` publica; con `publish=false` solo comprueba. El propietario es el único actor manual admitido. La programación solo ejecuta código de `main`.
+- El Mac debe estar encendido, con sesión iniciada, internet y **sin suspensión** alrededor de las 22:00 y hasta que termine la tarea. No se modificaron sus ajustes de energía ni se configuró un despertar automático. Después de reiniciar, hay que iniciar sesión para cargar el LaunchAgent.
 - Si el Mac está apagado o suspendido, los eventos guardados siguen visibles; se retrasa la ingesta. GitHub puede mantener trabajos en cola hasta su límite de espera, así que no debe prometerse una hora de actualización cuando el equipo no está disponible.
-- El cron existente del resto de fuentes continúa configurado a las 06:00 America/Lima. Aún incluye los malls desde Ubuntu y puede seguir reportando sus bloqueos; no se modificó en esta primera publicación.
+- El cron del resto de fuentes continúa a las 06:00 America/Lima y ahora excluye los malls mediante `--exclude-source mall-del-sur --exclude-source plaza-norte`, para que no repita desde Ubuntu consultas que deben ejecutarse en el Mac.
 
-Las siguientes decisiones pendientes son el horario de disponibilidad del equipo y la autorización/configuración de su servicio permanente. El acceso desde la conexión local quedó verificado en dos ejecuciones, pero cambios futuros de Cloudflare todavía pueden requerir atención.
+La comprobación manual del servicio permanente pasó. La primera ejecución disparada por el horario aún debe confirmarse cuando llegue su turno. Cambios futuros de Cloudflare pueden requerir atención.
+
+## Reparación de actividades continuas repetidas
+
+La auditoría pública encontró copias de una misma ficha de EntradaLibre con inicio distinto pero idéntica fecha final. El `fingerprint` incluía el inicio y permitía reinsertarlas cuando la fuente movía el inicio a «hoy».
+
+`pipeline/src/core/duplicates.ts` conserva el fingerprint para funciones independientes y añade una identidad de actividad continua: título y lugar normalizados, URL de la fuente y fecha final efectiva, con al menos un registro de varios días. Los parámetros de seguimiento se ignoran, pero se conservan parámetros que identifican funciones distintas. No se agrupan funciones de un solo día solo por coincidir en nombre. Juan eligió explícitamente **una tarjeta por función real**.
+
+[Ejecución de reparación e ingesta](https://github.com/Juangular/Events/actions/runs/42436968126), segundo intento después de corregir la ruta del servicio:
+
+- Vista previa: 43 grupos con 43 copias para archivar.
+- Aplicación: 43 filas automáticas, publicadas y gratuitas pasaron a `inactive`. Se conservaron las 43 filas con inicio más temprano, los IDs, fingerprints y el contenido original; no se borraron filas ni se modificaron registros manuales.
+- Nueva auditoría: cero grupos pendientes con ese patrón. Lectura pública: 328 eventos frente a los 371 anteriores; los 44 de los malls siguen visibles y las 14 funciones reales de títeres se conservan.
+- Ingesta de comprobación: cero inserciones nuevas; 31 duplicados reconocidos de Mall del Sur y 13 de Plaza Norte, sin errores.
+- Caso real: una lectura actual de «7 Concurso de Narrativa Gráfica» empieza el 7 de noviembre, mientras la fila conservada empieza el 6. La identidad nueva reconoce que es la misma actividad y evita crear otra copia.
+
+`npx tsx src/repair-duplicates.ts` solo muestra el plan. `--apply` archiva los duplicados. El input manual `repair_duplicates=true` requiere también `publish=true`; no se aplica por defecto ni durante el cron. Las pruebas cubren inicio variable, último día de un rango, conservación de funciones reales y paginación de datos existentes.
 
 ## Diagnóstico reproducible
 

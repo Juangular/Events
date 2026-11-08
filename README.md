@@ -60,7 +60,7 @@ La gestión mínima del contenido se realiza en el dashboard de Supabase. No exi
 
 ## Ingesta automática de eventos
 
-El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuitos de Lima y Callao desde fuentes públicas y los escribe en `events`. Se ejecuta automáticamente con GitHub Actions (`.github/workflows/ingest-events.yml`) una vez al día a las 06:00 America/Lima y también puede correrse a mano desde la pestaña *Actions* con *Run workflow*. Cada ejecución consulta todas las fuentes: inserta únicamente eventos nuevos y omite duplicados; si no hay novedades, no cambia nada.
+El directorio `pipeline/` contiene una herramienta que recolecta eventos gratuitos de Lima y Callao desde fuentes públicas y los escribe en `events`. Las fuentes cloud se ejecutan con GitHub Actions (`.github/workflows/ingest-events.yml`) a las 06:00 America/Lima, excluyendo los malls. Mall del Sur y Plaza Norte usan `.github/workflows/test-local-malls.yml` a las **22:00 America/Lima**, mediante el runner permanente del Mac. También se pueden ejecutar a mano desde *Actions*. Cada corrida inserta únicamente eventos nuevos y omite duplicados.
 
 Fuentes actuales:
 
@@ -87,7 +87,7 @@ Las nuevas fuentes tienen límites de 20 páginas y 500 fichas por ejecución, e
 
 Cuando un evento no tiene `image_url`, la interfaz busca una imagen relacionada con el título dentro de su categoría y, si no encuentra coincidencia, usa la imagen general de la categoría. Tarjetas y modal comparten el fallback de imagen propia a imagen por título y finalmente por categoría, sin reintentos en bucle. Las imágenes manuales en Supabase no se modifican con las corridas del pipeline.
 
-Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima o Callao, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar), leyendo todas las páginas de resultados. Los registros automáticos llevan `origin = 'auto'` y `source_key`; `department` conserva Callao cuando corresponde. RLS muestra solo eventos publicados, gratuitos y de Lima/Callao, y la interfaz organiza las fechas actuales, futuras y de archivo.
+Cada candidato debe pasar los filtros de `pipeline/src/core/gates.ts`: gratuidad verificada, ubicación en Lima o Callao, fechas vigentes, URLs `https://` y campos mínimos. Los duplicados se detectan por `fingerprint` (título + fecha + lugar), leyendo todas las páginas. Las actividades continuas también se comparan por título, lugar, URL y fecha final: que la fuente desplace su inicio a «hoy» no genera otra copia. Las funciones reales en fechas distintas conservan tarjetas separadas. Los registros automáticos llevan `origin = 'auto'` y `source_key`; `department` conserva Callao cuando corresponde. RLS muestra solo eventos publicados, gratuitos y de Lima/Callao, y la interfaz organiza las fechas actuales, futuras y de archivo.
 
 ### Publicación directa
 
@@ -120,9 +120,11 @@ npm run typecheck
 npm run ingest:dry
 ```
 
-Para validar una sola fuente sin escribir: `npm run ingest:dry -- --source plaza-norte` (sustituir por cualquiera de las claves anteriores). Las pruebas cubren paginación y dominios permitidos, precios positivos o mixtos, compras obligatorias, distritos, horarios recurrentes, selección del evento principal frente a recomendaciones y enlaces de inscripción pendientes. El cron continúa diario a las 06:00 de Lima; un push publica el código en Vercel, pero la ingesta necesita el cron o una ejecución manual de Actions para añadir los registros a Supabase.
+Para validar una sola fuente sin escribir: `npm run ingest:dry -- --source plaza-norte` (sustituir por cualquiera de las claves anteriores). Las pruebas cubren paginación y dominios permitidos, precios positivos o mixtos, compras obligatorias, distritos, horarios recurrentes, selección del evento principal frente a recomendaciones y enlaces de inscripción pendientes. Un push publica el código en Vercel, pero la ingesta necesita su cron o una ejecución manual de Actions para añadir registros a Supabase.
 
-En *Run workflow*, el campo opcional `source` permite ejecutar una sola fuente con los secretos de GitHub (por ejemplo, `plaza-norte`). Dejarlo vacío ejecuta todas. El cron siempre consulta todas las fuentes; este filtro manual sirve para diagnosticar bloqueos o validar un adaptador sin repetir toda la corrida.
+En el workflow cloud, `source` permite consultar una fuente específica; vacío consulta todas excepto los malls. Para los malls, usar **Malls en Mac local**, rama `main`, con `publish=true` (publicación) o `false` (solo prueba). La programación diaria publica automáticamente. El runner del Mac arranca al iniciar sesión y debe tener internet y estar despierto alrededor de las 22:00 hasta terminar; no hace falta abrir el editor ni el navegador. No se configuró un despertar automático. Si el equipo está apagado, la web conserva sus eventos y la actualización queda esperando. Detalles: [operación de los malls](docs/mall-access.md).
+
+Para auditar duplicados continuos con acceso servidor: `npx tsx src/repair-duplicates.ts` dentro de `pipeline/`. Solo muestra el plan; `--apply` cambia copias automáticas publicadas a `inactive`, conservando sus datos. La reparación nunca agrupa funciones de un solo día únicamente por tener el mismo título.
 
 ### Validación inicial desde GitHub Actions — 6 de noviembre de 2026
 
