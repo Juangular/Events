@@ -2,7 +2,7 @@
 
 ## Estado verificado el 7 de noviembre de 2026
 
-Inicialmente Juan eligió una solución sin equipo propio. Después autorizó probar un runner temporal en su Mac. La primera ejecución manual de GitHub Actions usando ese equipo terminó correctamente; los runners cloud probados siguen bloqueados. Todavía no se instaló un servicio permanente ni se activó un cron local.
+Inicialmente Juan eligió una solución sin equipo propio. Después autorizó probar un runner temporal en su Mac y realizar una primera publicación. Ambas ejecuciones manuales de GitHub Actions usando ese equipo terminaron correctamente; los runners cloud probados siguen bloqueados. Ya se publicaron 44 eventos, pero todavía no se instaló un servicio permanente ni se activó un cron local.
 
 | Prueba | Mall del Sur | Plaza Norte |
 | --- | --- | --- |
@@ -25,13 +25,36 @@ Corridas:
 
 ## Prueba con equipo propio
 
-`.github/workflows/test-local-malls.yml` se activa únicamente a mano, por el propietario del repositorio y desde `main`. Usa la etiqueta dedicada `plan-lima-malls-test`; el runner temporal se registró sin etiquetas genéricas para no recibir trabajos dirigidos a `self-hosted`. El checkout usa el commit de la ejecución y no conserva credenciales de Git. La prueba ejecuta los dos adaptadores sin secretos de Supabase ni escritura en la base.
+`.github/workflows/test-local-malls.yml` (nombre visible: **Malls en Mac local**) se activa únicamente a mano, por el propietario del repositorio y desde `main`. Usa la etiqueta dedicada `plan-lima-malls-test`; el runner temporal se registró sin etiquetas genéricas para no recibir trabajos dirigidos a `self-hosted`. El checkout usa el commit de la ejecución y no conserva credenciales de Git. Por defecto `publish=false`: ejecuta los dos adaptadores sin secretos de Supabase ni escritura en la base. Con `publish=true`, solo el paso de ingesta recibe `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` desde GitHub Secrets; instala dependencias y ejecuta las pruebas antes de entregar esos secretos al proceso de publicación.
 
 Se usó el runner oficial `actions/runner` 2.338.2 para macOS ARM64, verificando SHA-256 contra el digest publicado en su release. Se utilizó Chrome instalado y Node 22. La descarga y el checkout de prueba están en el directorio temporal de OpenCode, fuera del repositorio. No se instaló un servicio de inicio ni se modificó la suspensión del Mac.
 
 Este workflow necesita registrar y arrancar de nuevo un runner temporal antes de otra prueba; el registro anterior dejó de existir al completar su único trabajo. No es todavía una automatización diaria.
 
-Para pasar a producción se requiere autorizar la escritura con los secretos de GitHub y acordar el funcionamiento permanente del equipo. Después habrá que comprobar los registros insertados y su lectura pública, y decidir cómo se coordina la ejecución local de los malls con el cron existente del resto de fuentes. No basta con dejar un workflow en cola sin un runner disponible.
+## Primera publicación real
+
+[Ejecución 42434991285](https://github.com/Juangular/Events/actions/runs/42434991285), autorizada por Juan, completada en 1 min 13 s:
+
+| Fuente | Obtenidos | Insertados publicados | Duplicados previos | Descartados | Errores |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Mall del Sur | 37 | 31 | 0 | 6 | 0 |
+| Plaza Norte | 14 | 13 | 0 | 1 | 0 |
+
+La lectura con la clave pública de Supabase devolvió los 44 registros: todos publicados, gratuitos y de Lima, con 44 fingerprints distintos. Se verificaron en una sesión aislada del frontend local conectado a la base real los detalles y enlaces oficiales de Eddy Borshes (Mall del Sur) y Tony Cam (Plaza Norte). La URL única del despliegue obtenida de GitHub estaba protegida por Vercel; no se verificó esa URL como visitante. No se modificaron las políticas de Supabase en esta operación.
+
+El runner se dio de baja al completar la tarea. Los secretos se suministraron al paso de ingesta, no al frontend ni al repositorio. La ejecución no actualizó ni borró eventos existentes.
+
+## Operación: qué es automático y qué falta
+
+- La extracción, validación, publicación, descarte de duplicados y reporte son automáticos **durante una ejecución**. No hay que cargar a mano cada evento.
+- Los eventos ya guardados se sirven desde Supabase y Vercel aunque el Mac esté apagado. No es necesario desplegar otra vez para mostrar nuevas filas.
+- Las actualizaciones futuras de estos dos malls **todavía no son diarias automáticamente**. El workflow local solo tiene `workflow_dispatch` y no hay runner permanente registrado.
+- Para repetirlo manualmente hay que registrar y arrancar de nuevo un runner autorizado y luego ejecutar **Malls en Mac local**, rama `main`, con `publish=true`. Pulsar Run workflow sin un runner disponible deja la tarea esperando; no arranca el programa en el Mac.
+- Para automatizarlo diariamente hay que acordar un horario con Juan, configurar un runner/servicio permanente y coordinar su ejecución con el cron existente del resto de fuentes. El Mac debe tener sesión y servicio disponibles, internet y estar despierto en ese horario. El editor y la web no tienen que estar abiertos.
+- Si el Mac está apagado o suspendido, los eventos guardados siguen visibles; se retrasa la ingesta. GitHub puede mantener trabajos en cola hasta su límite de espera, así que no debe prometerse una hora de actualización cuando el equipo no está disponible.
+- El cron existente del resto de fuentes continúa configurado a las 06:00 America/Lima. Aún incluye los malls desde Ubuntu y puede seguir reportando sus bloqueos; no se modificó en esta primera publicación.
+
+Las siguientes decisiones pendientes son el horario de disponibilidad del equipo y la autorización/configuración de su servicio permanente. El acceso desde la conexión local quedó verificado en dos ejecuciones, pero cambios futuros de Cloudflare todavía pueden requerir atención.
 
 ## Diagnóstico reproducible
 
