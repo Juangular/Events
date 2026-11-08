@@ -1,11 +1,18 @@
 name: Malls en Mac local
 
 on:
+  schedule:
+    - cron: '0 3 * * *' # 22:00 America/Lima (UTC-5).
   workflow_dispatch:
     inputs:
       publish:
         description: 'Publicar eventos válidos en Supabase (false = solo comprobar)'
         required: true
+        type: boolean
+        default: false
+      repair_duplicates:
+        description: 'Archivar duplicados de actividades continuas (requiere publish=true)'
+        required: false
         type: boolean
         default: false
 
@@ -18,8 +25,8 @@ concurrency:
 
 jobs:
   collect:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.actor == github.repository_owner
-    runs-on: [plan-lima-malls-test]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner))
+    runs-on: [plan-lima-malls]
     timeout-minutes: 20
     defaults:
       run:
@@ -45,7 +52,7 @@ jobs:
       - name: Check adapters
         run: npm run typecheck && npm test
       - name: Collect both malls without database writes
-        if: ${{ !inputs.publish }}
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish }}
         run: |
           failed=0
           for source in mall-del-sur plaza-norte; do
@@ -56,8 +63,17 @@ jobs:
             fi
           done
           exit "$failed"
+      - name: Archive confirmed ongoing-event duplicates
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && inputs.repair_duplicates }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          npx tsx src/repair-duplicates.ts
+          npx tsx src/repair-duplicates.ts --apply
+          npx tsx src/repair-duplicates.ts
       - name: Publish valid events from both malls
-        if: ${{ inputs.publish }}
+        if: ${{ github.event_name == 'schedule' || inputs.publish }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

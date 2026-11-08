@@ -49,7 +49,7 @@ jobs:
           if [ -n "$SOURCE_FILTER" ]; then
             npm run ingest -- --source "$SOURCE_FILTER"
           else
-            npm run ingest
+            npm run ingest -- --exclude-source mall-del-sur --exclude-source plaza-norte
           fi
         env:
           SOURCE_FILTER: ${{ inputs.source }}

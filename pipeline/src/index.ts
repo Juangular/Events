@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CandidateEvent, RunCounters, SourceAdapter } from './types'
 import { closeBrowser } from './core/browser'
 import { publicationDecision } from './core/publication'
+import { EventDuplicates } from './core/duplicates'
 import { fingerprint } from './core/text'
 import {
   createAdminClient,
@@ -40,7 +41,7 @@ function emptyCounters(): RunCounters {
 
 async function runSource(
   adapter: SourceAdapter,
-  known: Set<string>,
+  known: EventDuplicates,
   client: SupabaseClient | null,
   dryRun: boolean,
 ): Promise<RunCounters> {
@@ -62,11 +63,11 @@ async function runSource(
       }
 
       const row = toEventInsert(candidate, adapter.key, 'published')
-      if (known.has(row.fingerprint)) {
+      if (known.has(row)) {
         counters.skippedDupes += 1
         continue
       }
-      known.add(row.fingerprint)
+      known.add(row)
       rows.push(row)
       counters.published += 1
     }
@@ -109,12 +110,17 @@ async function main(): Promise<void> {
     options: {
       'dry-run': { type: 'boolean', default: false },
       source: { type: 'string' },
+      'exclude-source': { type: 'string', multiple: true, default: [] },
     },
   })
   const dryRun = values['dry-run'] === true
-  const sources = values.source
+  for (const key of values['exclude-source'] ?? []) {
+    if (!ALL_SOURCES.some(adapter => adapter.key === key)) throw new Error(`Fuente excluida desconocida: ${key}`)
+  }
+  const requested = values.source
     ? ALL_SOURCES.filter((adapter) => adapter.key === values.source)
     : ALL_SOURCES
+  const sources = requested.filter(adapter => !values['exclude-source']?.includes(adapter.key))
 
   if (sources.length === 0) {
     console.error(`Fuente desconocida: ${values.source}. Disponibles: ${ALL_SOURCES.map((s) => s.key).join(', ')}`)
@@ -127,7 +133,7 @@ async function main(): Promise<void> {
 
   console.log(`Publicación automática de todos los candidatos válidos${dryRun ? ' (dry-run: sin escritura)' : ''}`)
 
-  const known = client ? await existingFingerprints(client) : new Set<string>()
+  const known = client ? await existingFingerprints(client) : new EventDuplicates()
   const totals = emptyCounters()
   const results: Array<{ source: SourceAdapter; counters: RunCounters }> = []
 

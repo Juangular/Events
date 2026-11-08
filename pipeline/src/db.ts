@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { CandidateEvent, RunCounters } from './types'
 import { fingerprint } from './core/text'
 import { eventDepartment } from './core/gates'
+import { EventDuplicates } from './core/duplicates'
 
 export interface EventInsert {
   title: string
@@ -42,14 +43,14 @@ export function createAdminClient(): SupabaseClient {
   })
 }
 
-export async function existingFingerprints(client: SupabaseClient): Promise<Set<string>> {
-  const known = new Set<string>()
+export async function existingFingerprints(client: SupabaseClient): Promise<EventDuplicates> {
+  const known = new EventDuplicates()
   const pageSize = 500
   for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await client.from('events').select('fingerprint').not('fingerprint', 'is', null)
+    const { data, error } = await client.from('events').select('fingerprint,title,place,source_url,start_date,end_date').not('fingerprint', 'is', null)
       .order('id', { ascending: true }).range(offset, offset + pageSize - 1)
     if (error) throw new Error(`No se pudieron leer fingerprints: ${error.message}`)
-    for (const row of data ?? []) known.add(row.fingerprint as string)
+    for (const row of data ?? []) known.add(row)
     if (!data || data.length < pageSize) return known
   }
 }

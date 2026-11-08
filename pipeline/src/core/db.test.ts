@@ -4,7 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { existingFingerprints } from '../db'
 
 test('duplicate detection reads beyond the default API row limit with stable pages', async () => {
-  const rows = Array.from({ length: 1201 }, (_, i) => ({ fingerprint: `event-${i}` }))
+  const rows = Array.from({ length: 1201 }, (_, i) => ({ fingerprint: `event-${i}`, title: `Evento ${i}`, place: 'Lugar',
+    source_url: `https://example.com/event/${i}`, start_date: '2026-11-07', end_date: null }))
   const ranges: number[][] = []
   const query = {
     select: () => query, not: () => query, order: () => query,
@@ -15,7 +16,7 @@ test('duplicate detection reads beyond the default API row limit with stable pag
   }
   const client = { from: () => query } as unknown as SupabaseClient
   const known = await existingFingerprints(client)
-  assert.equal(known.size, 1201)
-  assert.ok(known.has('event-1200'))
+  assert.ok(known.has(rows[1200]!))
+  assert.ok(known.has(rows[0]!))
   assert.deepEqual(ranges, [[0, 499], [500, 999], [1000, 1499]])
 })
