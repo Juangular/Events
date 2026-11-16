@@ -27,7 +27,7 @@ jobs:
   collect:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner))
     runs-on: [plan-lima-malls]
-    timeout-minutes: 20
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: pipeline
@@ -47,6 +47,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: pipeline/package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: Check adapters
@@ -90,6 +92,7 @@ jobs:
       - name: Preserve diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: local-malls-diagnostic
           path: |
